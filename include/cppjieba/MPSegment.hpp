@@ -2,8 +2,8 @@
 #define CPPJIEBA_MPSEGMENT_H
 
 #include <algorithm>
-#include <set>
 #include <cassert>
+#include <cmath>
 #include "Utils.hpp"
 #include "DictTrie.hpp"
 #include "SegmentTagged.hpp"
@@ -57,10 +57,7 @@ class MPSegment: public SegmentTagged {
            vector<WordRange>& words,
            size_t max_word_len = MAX_WORD_LENGTH) const {
     vector<Dag> dags;
-    dictTrie_->Find(begin, 
-          end, 
-          dags,
-          max_word_len);
+    dictTrie_->BuildDag(begin, end, dags, max_word_len);
     CalcDP(dags);
     CutByDag(begin, end, dags, words);
   }
@@ -73,35 +70,28 @@ class MPSegment: public SegmentTagged {
     return tagger_.Tag(src, res, *this);
   }
 
-  bool IsUserDictSingleChineseWord(const Rune& value) const {
-    return dictTrie_->IsUserDictSingleChineseWord(value);
+  bool IsUserDictSingleRune(const Rune& value) const {
+    return dictTrie_->IsUserDictSingleRune(value);
   }
  private:
   void CalcDP(vector<Dag>& dags) const {
-    size_t nextPos;
-    const DictUnit* p;
-    double val;
-
     for (vector<Dag>::reverse_iterator rit = dags.rbegin(); rit != dags.rend(); rit++) {
-      rit->pInfo = NULL;
       rit->weight = MIN_DOUBLE;
-      assert(!rit->nexts.empty());
-      for (LocalVector<pair<size_t, const DictUnit*> >::const_iterator it = rit->nexts.begin(); it != rit->nexts.end(); it++) {
-        nextPos = it->first;
-        p = it->second;
-        val = 0.0;
-        if (nextPos + 1 < dags.size()) {
-          val += dags[nextPos + 1].weight;
+      rit->next_pos = 0;
+      assert(!rit->edges.empty());
+      for (LocalVector<DagEdge>::const_iterator it = rit->edges.begin();
+           it != rit->edges.end(); ++it) {
+        assert(it->end < dags.size());
+        assert(std::isfinite(it->weight));
+        double candidate = it->weight;
+        if (it->end + 1 < dags.size()) {
+          assert(std::isfinite(dags[it->end + 1].weight));
+          candidate += dags[it->end + 1].weight;
         }
-
-        if (p) {
-          val += p->weight;
-        } else {
-          val += dictTrie_->GetMinWeight();
-        }
-        if (val > rit->weight) {
-          rit->pInfo = p;
-          rit->weight = val;
+        assert(std::isfinite(candidate));
+        if (candidate > rit->weight) {
+          rit->weight = candidate;
+          rit->next_pos = it->end;
         }
       }
     }
@@ -111,18 +101,11 @@ class MPSegment: public SegmentTagged {
         const vector<Dag>& dags, 
         vector<WordRange>& words) const {
     size_t i = 0;
+    assert(static_cast<size_t>(end - begin) == dags.size());
     while (i < dags.size()) {
-      const DictUnit* p = dags[i].pInfo;
-      if (p) {
-        assert(p->word.size() >= 1);
-        WordRange wr(begin + i, begin + i + p->word.size() - 1);
-        words.push_back(wr);
-        i += p->word.size();
-      } else { //single chinese word
-        WordRange wr(begin + i, begin + i);
-        words.push_back(wr);
-        i++;
-      }
+      assert(dags[i].next_pos >= i && dags[i].next_pos < dags.size());
+      words.push_back(WordRange(begin + i, begin + dags[i].next_pos));
+      i = dags[i].next_pos + 1;
     }
   }
 

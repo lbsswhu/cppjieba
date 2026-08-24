@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -16,7 +15,6 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -62,28 +60,15 @@ struct DictionaryData {
       : trie(),
         tags(),
         user_single_runes(),
-        freq_sum(0.0),
         min_weight(0.0),
-        max_weight(0.0),
-        median_weight(0.0),
-        default_weight(0.0),
-        stats(),
-        legacy_units() {
+        stats() {
   }
 
   DoubleArrayTrie trie;
   std::vector<std::string> tags;
   std::vector<Rune> user_single_runes;
-  double freq_sum;
   double min_weight;
-  double max_weight;
-  double median_weight;
-  double default_weight;
   DictionaryStats stats;
-
-  // Temporary compatibility storage for the pointer-based Trie. The DAT never
-  // points into these values.
-  std::vector<DictUnit> legacy_units;
 };
 
 class DictTrie {
@@ -96,60 +81,36 @@ class DictTrie {
 
   DictTrie(const std::string& dict_path,
            const std::string& user_dict_paths = "",
-           UserWordWeightOption user_word_weight_opt = WordWeightMedian)
-      : trie_(NULL) {
+           UserWordWeightOption user_word_weight_opt = WordWeightMedian) {
     Init(dict_path, user_dict_paths, user_word_weight_opt);
-  }
-
-  ~DictTrie() {
-    delete trie_;
   }
 
   bool InsertUserWord(const std::string& word,
                       const std::string& tag = UNKNOWN_TAG) {
-    DictUnit node_info;
-    if (!MakeNodeInfo(node_info, word, user_word_default_weight_, tag)) {
-      return false;
-    }
-    active_node_infos_.push_back(node_info);
-    trie_->InsertNode(node_info.word, &active_node_infos_.back());
-    return true;
+    (void)word;
+    (void)tag;
+    XLOG(ERROR)
+        << "static dictionary is immutable; pass user words to the constructor";
+    return false;
   }
 
   bool InsertUserWord(const std::string& word, int freq,
                       const std::string& tag = UNKNOWN_TAG) {
-    DictUnit node_info;
-    double weight = freq
-        ? std::log(static_cast<double>(freq)) - std::log(freq_sum_)
-        : user_word_default_weight_;
-    if (!MakeNodeInfo(node_info, word, weight, tag)) {
-      return false;
-    }
-    active_node_infos_.push_back(node_info);
-    trie_->InsertNode(node_info.word, &active_node_infos_.back());
-    return true;
+    (void)word;
+    (void)freq;
+    (void)tag;
+    XLOG(ERROR)
+        << "static dictionary is immutable; pass user words to the constructor";
+    return false;
   }
 
   bool DeleteUserWord(const std::string& word,
                       const std::string& tag = UNKNOWN_TAG) {
-    DictUnit node_info;
-    if (!MakeNodeInfo(node_info, word, user_word_default_weight_, tag)) {
-      return false;
-    }
-    trie_->DeleteNode(node_info.word, &node_info);
-    return true;
-  }
-
-  const DictUnit* Find(RuneStrArray::const_iterator begin,
-                       RuneStrArray::const_iterator end) const {
-    return trie_->Find(begin, end);
-  }
-
-  void Find(RuneStrArray::const_iterator begin,
-            RuneStrArray::const_iterator end,
-            std::vector<struct Dag>& res,
-            size_t max_word_len = MAX_WORD_LENGTH) const {
-    trie_->Find(begin, end, res, max_word_len);
+    (void)word;
+    (void)tag;
+    XLOG(ERROR)
+        << "static dictionary is immutable; pass user words to the constructor";
+    return false;
   }
 
   bool Contains(RuneStrArray::const_iterator begin,
@@ -213,10 +174,6 @@ class DictTrie {
                               data_->user_single_runes.end(), word);
   }
 
-  bool IsUserDictSingleChineseWord(const Rune& word) const {
-    return IsIn(user_dict_single_chinese_word_, word);
-  }
-
   double GetMinWeight() const {
     return data_->min_weight;
   }
@@ -229,56 +186,22 @@ class DictTrie {
     return data_.get();
   }
 
-  // Legacy runtime mutation APIs remain pointer-trie-only during the
-  // intermediate migration.
-  void InserUserDictNode(const std::string& line) {
-    std::vector<std::string> buf;
-    DictUnit node_info;
-    Split(line, buf, " ");
-    if (buf.size() == 1) {
-      MakeNodeInfo(node_info, buf[0], user_word_default_weight_, UNKNOWN_TAG);
-    } else if (buf.size() == 2) {
-      MakeNodeInfo(node_info, buf[0], user_word_default_weight_, buf[1]);
-    } else if (buf.size() == 3) {
-      int freq = std::atoi(buf[1].c_str());
-      assert(freq_sum_ > 0.0);
-      double weight = std::log(static_cast<double>(freq)) -
-                      std::log(freq_sum_);
-      MakeNodeInfo(node_info, buf[0], weight, buf[2]);
-    }
-    static_node_infos_.push_back(node_info);
-    if (node_info.word.size() == 1) {
-      user_dict_single_chinese_word_.insert(node_info.word[0]);
-    }
-  }
-
   void LoadUserDict(const std::vector<std::string>& buf) {
-    for (size_t i = 0; i < buf.size(); ++i) {
-      InserUserDictNode(buf[i]);
-    }
+    (void)buf;
+    XLOG(ERROR)
+        << "static dictionary is immutable; pass user words to the constructor";
   }
 
   void LoadUserDict(const std::set<std::string>& buf) {
-    for (std::set<std::string>::const_iterator iter = buf.begin();
-         iter != buf.end(); ++iter) {
-      InserUserDictNode(*iter);
-    }
+    (void)buf;
+    XLOG(ERROR)
+        << "static dictionary is immutable; pass user words to the constructor";
   }
 
   void LoadUserDict(const std::string& file_paths) {
-    const std::vector<std::string> files = Split(file_paths, "|;");
-    for (size_t i = 0; i < files.size(); ++i) {
-      std::ifstream ifs;
-      OpenInputFile(ifs, files[i]);
-      XCHECK(ifs.is_open()) << "open " << files[i] << " failed";
-      std::string line;
-      while (std::getline(ifs, line)) {
-        if (line.empty()) {
-          continue;
-        }
-        InserUserDictNode(line);
-      }
-    }
+    (void)file_paths;
+    XLOG(ERROR)
+        << "static dictionary is immutable; pass user words to the constructor";
   }
 
  private:
@@ -604,30 +527,19 @@ class DictTrie {
     }
 
     std::shared_ptr<DictionaryData> data(new DictionaryData);
-    data->freq_sum = freq_sum;
     data->min_weight = min_weight;
-    data->median_weight = median_weight;
-    data->max_weight = max_weight;
-    data->default_weight = default_weight;
     data->tags.push_back(UNKNOWN_TAG);
 
     std::unordered_map<std::string, uint16_t> tag_ids;
     tag_ids.insert(std::make_pair(std::string(UNKNOWN_TAG), 0));
     std::vector<DoubleArrayTrie::BuildEntry> entries;
     entries.reserve(survivors.size());
-    data->legacy_units.reserve(survivors.size());
     for (size_t i = 0; i < survivors.size(); ++i) {
       DoubleArrayTrie::BuildEntry entry;
       entry.word = survivors[i].word;
       entry.weight = survivors[i].weight;
       entry.tag_id = InternTag(survivors[i].tag, &tag_ids, &data->tags);
       entries.push_back(entry);
-
-      DictUnit legacy_unit;
-      legacy_unit.word = survivors[i].word;
-      legacy_unit.weight = survivors[i].weight;
-      legacy_unit.tag = survivors[i].tag;
-      data->legacy_units.push_back(legacy_unit);
 
       if (survivors[i].from_user && survivors[i].word.size() == 1) {
         data->user_single_runes.push_back(survivors[i].word[0]);
@@ -710,65 +622,9 @@ class DictTrie {
     data_ = GetDictionaryData(key);
     XCHECK(data_ && data_->stats.terminal_count != 0)
         << "effective dictionary must not be empty";
-
-    base_static_node_infos_ =
-        std::shared_ptr<const std::vector<DictUnit> >(
-            data_, &data_->legacy_units);
-    freq_sum_ = data_->freq_sum;
-    min_weight_ = data_->min_weight;
-    max_weight_ = data_->max_weight;
-    median_weight_ = data_->median_weight;
-    user_word_default_weight_ = data_->default_weight;
-    user_dict_single_chinese_word_.insert(
-        data_->user_single_runes.begin(), data_->user_single_runes.end());
-    CreateTrie();
-  }
-
-  void CreateTrie() {
-    const size_t total_size =
-        base_static_node_infos_->size() + static_node_infos_.size();
-    assert(total_size);
-    std::vector<Unicode> words;
-    std::vector<const DictUnit*> value_pointers;
-    words.reserve(total_size);
-    value_pointers.reserve(total_size);
-
-    for (size_t i = 0; i < base_static_node_infos_->size(); ++i) {
-      words.push_back((*base_static_node_infos_)[i].word);
-      value_pointers.push_back(&(*base_static_node_infos_)[i]);
-    }
-    for (size_t i = 0; i < static_node_infos_.size(); ++i) {
-      words.push_back(static_node_infos_[i].word);
-      value_pointers.push_back(&static_node_infos_[i]);
-    }
-    trie_ = new Trie(words, value_pointers);
-  }
-
-  bool MakeNodeInfo(DictUnit& node_info,
-                    const std::string& word,
-                    double weight,
-                    const std::string& tag) {
-    if (!DecodeUTF8RunesInString(word, node_info.word)) {
-      XLOG(ERROR) << "UTF-8 decode failed for dict word: " << word;
-      return false;
-    }
-    node_info.weight = weight;
-    node_info.tag = tag;
-    return true;
   }
 
   std::shared_ptr<const DictionaryData> data_;
-  std::shared_ptr<const std::vector<DictUnit> > base_static_node_infos_;
-  std::vector<DictUnit> static_node_infos_;
-  std::deque<DictUnit> active_node_infos_; // must not be std::vector
-  Trie* trie_;
-
-  double freq_sum_;
-  double min_weight_;
-  double max_weight_;
-  double median_weight_;
-  double user_word_default_weight_;
-  std::unordered_set<Rune> user_dict_single_chinese_word_;
 };
 
 }  // namespace cppjieba

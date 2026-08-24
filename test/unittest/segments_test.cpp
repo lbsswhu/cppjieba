@@ -113,6 +113,23 @@ TEST(MixSegmentTest, UserDict) {
   }
 }
 
+TEST(MixSegmentTest, ConstructorUserSingleRuneBypassesHmm) {
+  MixSegment without_user_dict(
+      TEST_DATA_DIR "/extra_dict/jieba.dict.small.utf8",
+      DICT_DIR "/hmm_model.utf8");
+  MixSegment with_user_dict(
+      TEST_DATA_DIR "/extra_dict/jieba.dict.small.utf8",
+      DICT_DIR "/hmm_model.utf8",
+      TEST_DATA_DIR "/userdict.utf8");
+  vector<string> words;
+
+  without_user_dict.Cut("AB", words);
+  ASSERT_EQ("AB", Join(words.begin(), words.end(), "/"));
+
+  with_user_dict.Cut("AB", words);
+  ASSERT_EQ("A/B", Join(words.begin(), words.end(), "/"));
+}
+
 TEST(MixSegmentTest, TestUserDict) {
   MixSegment segment(TEST_DATA_DIR "/extra_dict/jieba.dict.small.utf8", DICT_DIR "/hmm_model.utf8", 
         TEST_DATA_DIR "/userdict.utf8");
@@ -190,6 +207,17 @@ TEST(MPSegmentTest, Test1) {
   segment.Cut("湖南长沙市天心区", words, 3);
   s = Join(words.begin(), words.end(), "/");
   ASSERT_EQ("湖南/长沙市/天心区", s);
+}
+
+TEST(MPSegmentTest, MaximumWordLengthBoundary) {
+  MPSegment segment(DICT_DIR "/jieba.dict.utf8");
+  vector<string> words;
+
+  segment.Cut("长江大桥", words, 3);
+  ASSERT_EQ("长江/大桥", Join(words.begin(), words.end(), "/"));
+
+  segment.Cut("长江大桥", words, 4);
+  ASSERT_EQ("长江大桥", Join(words.begin(), words.end(), "/"));
 }
 
 TEST(HMMSegmentTest, Test1) {

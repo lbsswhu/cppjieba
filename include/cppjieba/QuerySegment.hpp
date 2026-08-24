@@ -55,7 +55,7 @@ class QuerySegment: public SegmentBase {
       if (mixResItr->Length() > 2) {
         for (size_t i = 0; i + 1 < mixResItr->Length(); i++) {
           WordRange wr(mixResItr->left + i, mixResItr->left + i + 1);
-          if (trie_->Find(wr.left, wr.right + 1) != NULL) {
+          if (trie_->Contains(wr.left, wr.right + 1)) {
             res.push_back(wr);
           }
         }
@@ -63,7 +63,7 @@ class QuerySegment: public SegmentBase {
       if (mixResItr->Length() > 3) {
         for (size_t i = 0; i + 2 < mixResItr->Length(); i++) {
           WordRange wr(mixResItr->left + i, mixResItr->left + i + 2);
-          if (trie_->Find(wr.left, wr.right + 1) != NULL) {
+          if (trie_->Contains(wr.left, wr.right + 1)) {
             res.push_back(wr);
           }
         }

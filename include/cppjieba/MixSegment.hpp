@@ -56,14 +56,14 @@ class MixSegment: public SegmentTagged {
     hmmRes.reserve(end - begin);
     for (size_t i = 0; i < words.size(); i++) {
       //if mp Get a word, it's ok, put it into result
-      if (words[i].left != words[i].right || (words[i].left == words[i].right && mpSeg_.IsUserDictSingleChineseWord(words[i].left->rune))) {
+      if (words[i].left != words[i].right || (words[i].left == words[i].right && mpSeg_.IsUserDictSingleRune(words[i].left->rune))) {
         res.push_back(words[i]);
         continue;
       }
 
       // if mp Get a single one and it is not in userdict, collect it in sequence
       size_t j = i;
-      while (j < words.size() && words[j].left == words[j].right && !mpSeg_.IsUserDictSingleChineseWord(words[j].left->rune)) {
+      while (j < words.size() && words[j].left == words[j].right && !mpSeg_.IsUserDictSingleRune(words[j].left->rune)) {
         j++;
       }
 
