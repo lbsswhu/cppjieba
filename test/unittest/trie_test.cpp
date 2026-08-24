@@ -439,7 +439,7 @@ TEST(DictTrieDeathTest, RejectsOverflowingAggregateFrequency) {
       {
         DictTrie trie(main_dict.path());
       },
-      "aggregate frequency must be finite and greater than zero at [^:]+:2");
+      "aggregate frequency must be finite and greater than zero at .*:2");
 }
 
 TEST(DictTrieDeathTest, RejectsOutOfRangeMainFrequency) {
@@ -496,7 +496,7 @@ TEST(DictTrieDeathTest, RejectsEveryInvalidMainFrequencyTokenAtSource) {
         {
           DictTrie trie(main_dict.path());
         },
-        "frequency must be finite and greater than zero at [^:]+:1");
+        "frequency must be finite and greater than zero at .*:1");
   }
 }
 
@@ -514,7 +514,7 @@ TEST(DictTrieDeathTest, RejectsMainColumnAndBlankRowErrorsAtSource) {
         {
           DictTrie trie(main_dict.path());
         },
-        "main dictionary row must contain exactly word frequency tag at [^:]+:1");
+        "main dictionary row must contain exactly word frequency tag at .*:1");
   }
 }
 
@@ -535,7 +535,7 @@ TEST(DictTrieDeathTest, RejectsInvalidUtf8MainWordsAtSource) {
         {
           DictTrie trie(main_dict.path());
         },
-        "dictionary word must be nonempty valid UTF-8 at [^:]+:1");
+        "dictionary word must be nonempty valid UTF-8 at .*:1");
   }
 }
 
@@ -578,7 +578,7 @@ TEST(DictTrieDeathTest, RejectsEveryInvalidUserFrequencyTokenAtSource) {
         {
           DictTrie trie(main_dict.path(), user_dict.path());
         },
-        "frequency must be finite and greater than zero at [^:]+:1");
+        "frequency must be finite and greater than zero at .*:1");
   }
 }
 
@@ -596,7 +596,7 @@ TEST(DictTrieDeathTest, RejectsUserColumnAndBlankRowErrorsAtSource) {
         {
           DictTrie trie(main_dict.path(), user_dict.path());
         },
-        "user dictionary row must contain word, word tag, or word frequency tag at [^:]+:1");
+        "user dictionary row must contain word, word tag, or word frequency tag at .*:1");
   }
 }
 
@@ -618,7 +618,7 @@ TEST(DictTrieDeathTest, RejectsInvalidUtf8UserWordsAtSource) {
         {
           DictTrie trie(main_dict.path(), user_dict.path());
         },
-        "dictionary word must be nonempty valid UTF-8 at [^:]+:1");
+        "dictionary word must be nonempty valid UTF-8 at .*:1");
   }
 }
 
