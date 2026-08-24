@@ -18,6 +18,18 @@ struct DictUnit {
   string tag;
 }; // struct DictUnit
 
+struct DagEdge {
+  size_t end;
+  double weight;
+  bool in_dict;
+
+  DagEdge(): end(0), weight(0.0), in_dict(false) {
+  }
+  DagEdge(size_t edge_end, double edge_weight, bool edge_in_dict)
+      : end(edge_end), weight(edge_weight), in_dict(edge_in_dict) {
+  }
+}; // struct DagEdge
+
 // for debugging
 // inline ostream & operator << (ostream& os, const DictUnit& unit) {
 //   string s;
@@ -32,7 +44,10 @@ struct Dag {
   const DictUnit * pInfo;
   double weight;
   size_t nextPos; // TODO
-  Dag():runestr(), pInfo(NULL), weight(0.0), nextPos(0) {
+  LocalVector<DagEdge> edges;
+  size_t next_pos;
+  Dag():runestr(), nexts(), pInfo(NULL), weight(0.0), nextPos(0),
+        edges(), next_pos(0) {
   }
 }; // struct Dag
 
