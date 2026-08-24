@@ -137,6 +137,20 @@ TEST(DictTrieTest, ExactLookupAndDagUseValueContracts) {
   EXPECT_TRUE(dags[0].edges[0].in_dict);
 }
 
+TEST(DictTrieTest, StringFindUsesImmutableDictionaryData) {
+  TempFile main_dict("immutable_find", "甲 100 n\n");
+  DictTrie trie(main_dict.path());
+  RuneStrArray runes = DecodeText("乙");
+
+  EXPECT_FALSE(trie.Contains(runes.begin(), runes.end()));
+  EXPECT_FALSE(trie.Find("乙"));
+
+  ASSERT_TRUE(trie.InsertUserWord("乙", "runtime"));
+  EXPECT_TRUE(trie.Find(runes.begin(), runes.end()) != NULL);
+  EXPECT_FALSE(trie.Contains(runes.begin(), runes.end()));
+  EXPECT_FALSE(trie.Find("乙"));
+}
+
 TEST(DictTrieTest, UserDictionaryPreservesTagsAndWeightOptions) {
   DictTrie trie(DICT_FILE, TEST_DATA_DIR "/userdict.utf8");
 

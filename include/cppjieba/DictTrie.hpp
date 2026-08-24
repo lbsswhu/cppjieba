@@ -162,7 +162,7 @@ class DictTrie {
       XLOG(ERROR) << "Decode failed.";
       return false;
     }
-    return Find(runes.begin(), runes.end()) != NULL;
+    return Contains(runes.begin(), runes.end());
   }
 
   bool FindTag(RuneStrArray::const_iterator begin,
