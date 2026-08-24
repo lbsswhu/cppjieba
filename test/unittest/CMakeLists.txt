@@ -28,6 +28,7 @@ INCLUDE_DIRECTORIES(
 
 ADD_EXECUTABLE(test.run 
     gtest_main.cpp 
+    double_array_trie_test.cpp
     keyword_extractor_test.cpp 
     trie_test.cpp 
     segments_test.cpp 
