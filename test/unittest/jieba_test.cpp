@@ -124,44 +124,44 @@ TEST(JiebaTest, WordTest) {
   ASSERT_EQ("[{\"word\": \"\xE4\xBB\x96\", \"offset\": 0}, {\"word\": \"\xE6\x9D\xA5\xE5\x88\xB0\", \"offset\": 3}, {\"word\": \"\xE4\xBA\x86\", \"offset\": 9}, {\"word\": \"\xE7\xBD\x91\xE6\x98\x93\", \"offset\": 12}, {\"word\": \"\xE6\x9D\xAD\xE7\xA0\x94\", \"offset\": 18}, {\"word\": \"\xE5\xA4\xA7\xE5\x8E\xA6\", \"offset\": 24}]", result);
 }
 
-TEST(JiebaTest, InsertUserWord) {
+TEST(JiebaTest, RuntimeDictionaryMutationIsRejected) {
   cppjieba::Jieba jieba(DICT_DIR "/jieba.dict.utf8",
                         DICT_DIR "/hmm_model.utf8",
                         DICT_DIR "/user.dict.utf8",
                         DICT_DIR "/idf.utf8",
                         DICT_DIR "/stop_words.utf8");
   vector<string> words;
-  string result;
 
   jieba.Cut("男默女泪", words);
-  result << words;
-  ASSERT_EQ("[\"男默\", \"女泪\"]", result);
+  ASSERT_EQ("男默/女泪", Join(words.begin(), words.end(), "/"));
+  EXPECT_FALSE(jieba.Find("男默女泪"));
+  EXPECT_TRUE(jieba.Find("云计算"));
 
-  ASSERT_TRUE(jieba.InsertUserWord("男默女泪"));
+  const vector<string> vector_words(1, "男默女泪 nz");
+  set<string> set_words;
+  set_words.insert("同一个世界 nz");
 
-  jieba.Cut("男默女泪", words);
-  result << words;
-  ASSERT_EQ("[\"男默女泪\"]", result);
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(jieba.InsertUserWord("男默女泪"));
+  EXPECT_FALSE(jieba.InsertUserWord("男默女泪", 100, "nz"));
+  EXPECT_FALSE(jieba.DeleteUserWord("云计算"));
+  jieba.LoadUserDict(vector_words);
+  jieba.LoadUserDict(set_words);
+  jieba.LoadUserDict(TEST_DATA_DIR "/userdict.2.utf8");
+  const string log = testing::internal::GetCapturedStderr();
 
-  for (size_t i = 0; i < 100; i++) {
-    string newWord;
-    newWord << rand();
-    ASSERT_TRUE(jieba.InsertUserWord(newWord));
-    jieba.Cut(newWord, words);
-    result << words;
-    ASSERT_EQ(result, StringFormat("[\"%s\"]", newWord.c_str()));
+  const string immutable_message = "static dictionary is immutable";
+  size_t message_count = 0;
+  for (size_t pos = log.find(immutable_message); pos != string::npos;
+       pos = log.find(immutable_message, pos + immutable_message.size())) {
+    ++message_count;
   }
-
-  ASSERT_TRUE(jieba.InsertUserWord("同一个世界，同一个梦想"));
-  jieba.Cut("同一个世界，同一个梦想", words);
-  result = Join(words.begin(), words.end(), "/");
-  ASSERT_EQ(result, "同一个/世界/，/同一个/梦想");
-
-  jieba.ResetSeparators("");
-
-  jieba.Cut("同一个世界，同一个梦想", words);
-  result = Join(words.begin(), words.end(), "/");
-  ASSERT_EQ(result, "同一个世界，同一个梦想");
+  EXPECT_EQ(6u, message_count);
+  EXPECT_FALSE(jieba.Find("男默女泪"));
+  EXPECT_FALSE(jieba.Find("同一个世界"));
+  EXPECT_TRUE(jieba.Find("云计算"));
+  jieba.Cut("男默女泪", words);
+  EXPECT_EQ("男默/女泪", Join(words.begin(), words.end(), "/"));
 
   {
     string s("一部iPhone6");

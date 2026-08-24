@@ -25,6 +25,10 @@ TEST(PosTaggerTest, Test) {
 }
 TEST(PosTagger, TestUserDict) {
   MixSegment tagger(DICT_DIR "/jieba.dict.utf8", DICT_DIR "/hmm_model.utf8", TEST_DATA_DIR "/userdict.utf8");
+  EXPECT_EQ("nz", tagger.LookupTag("蓝翔"));
+  EXPECT_EQ("x", tagger.LookupTag("云计算"));
+  EXPECT_EQ("m", tagger.LookupTag("12345"));
+  EXPECT_EQ("eng", tagger.LookupTag("iPhone6"));
   {
     vector<pair<string, string> > res;
     tagger.Tag(QUERY_TEST2, res);

@@ -111,6 +111,18 @@ std::string FormatRSSDetails(double before_rss_mb, double after_rss_mb) {
   return oss.str();
 }
 
+std::string FormatDATStats(const DictionaryStats& stats) {
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(6)
+      << "slots=" << stats.slot_count
+      << " occupied=" << stats.occupied_state_count
+      << " terminals=" << stats.terminal_count
+      << " load_factor=" << stats.load_factor
+      << " array_bytes=" << stats.array_bytes
+      << " tag_bytes=" << stats.tag_bytes;
+  return oss.str();
+}
+
 std::string FormatThroughputDetails(size_t iterations, size_t bytes, size_t output_words, double millis) {
   const double seconds = millis / 1000.0;
   const double mb = static_cast<double>(bytes) / (1024.0 * 1024.0);
@@ -170,6 +182,8 @@ int main(int argc, char** argv) {
   });
   double rss_after_dict = GetCurrentRSSInMB();
   PrintMetric("DictTrieLoad", dict_load_ms, FormatRSSDetails(rss_before, rss_after_dict));
+  std::cout << "BENCH DATStats " << FormatDATStats(dict_trie->GetStats())
+            << std::endl;
 
   HMMModel* hmm_model = NULL;
   const double hmm_load_ms = MeasureMillis([&hmm_model, &model_path]() {

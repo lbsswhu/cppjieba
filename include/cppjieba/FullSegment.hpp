@@ -48,41 +48,26 @@ class FullSegment: public SegmentBase {
   void Cut(RuneStrArray::const_iterator begin, 
         RuneStrArray::const_iterator end, 
         vector<WordRange>& res) const {
-    // result of searching in trie tree
-    LocalVector<pair<size_t, const DictUnit*> > tRes;
-
-    // max index of res's words
-    size_t maxIdx = 0;
-
-    // always equals to (uItr - begin)
-    size_t uIdx = 0;
-
-    // tmp variables
-    size_t wordLen = 0;
     assert(dictTrie_);
-    vector<struct Dag> dags;
-    dictTrie_->Find(begin, end, dags);
-    for (size_t i = 0; i < dags.size(); i++) {
-      for (size_t j = 0; j < dags[i].nexts.size(); j++) {
-        size_t nextoffset = dags[i].nexts[j].first;
-        assert(nextoffset < dags.size());
-        const DictUnit* du = dags[i].nexts[j].second;
-        if (du == NULL) {
-          wordLen = 1;
-          if (dags[i].nexts.size() == 1 && maxIdx <= uIdx) {
-            WordRange wr(begin + i, begin + nextoffset);
-            res.push_back(wr);
-          }
-        } else {
-          wordLen = du->word.size();
-          if (wordLen >= 2 || (dags[i].nexts.size() == 1 && maxIdx <= uIdx)) {
-            WordRange wr(begin + i, begin + nextoffset);
-            res.push_back(wr);
-          }
+    vector<Dag> dags;
+    dictTrie_->BuildDag(begin, end, dags);
+    size_t max_end_exclusive = 0;
+    for (size_t start = 0; start < dags.size(); ++start) {
+      const bool only_edge = dags[start].edges.size() == 1;
+      for (LocalVector<DagEdge>::const_iterator edge =
+               dags[start].edges.begin();
+           edge != dags[start].edges.end(); ++edge) {
+        assert(edge->end >= start && edge->end < dags.size());
+        const size_t word_len = edge->end - start + 1;
+        const bool uncovered = max_end_exclusive <= start;
+        const bool include = edge->in_dict
+            ? word_len >= 2 || (only_edge && uncovered)
+            : only_edge && uncovered;
+        if (include) {
+          res.push_back(WordRange(begin + start, begin + edge->end));
         }
-        maxIdx = uIdx + wordLen > maxIdx ? uIdx + wordLen : maxIdx;
+        max_end_exclusive = std::max(max_end_exclusive, start + word_len);
       }
-      uIdx++;
     }
   }
  private:

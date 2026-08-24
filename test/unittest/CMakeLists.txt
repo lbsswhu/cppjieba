@@ -13,6 +13,7 @@ FetchContent_Declare(
   GIT_TAG release-1.12.1
 )
 FetchContent_MakeAvailable(googletest)
+find_package(Threads REQUIRED)
 
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/test)
@@ -28,6 +29,7 @@ INCLUDE_DIRECTORIES(
 
 ADD_EXECUTABLE(test.run 
     gtest_main.cpp 
+    double_array_trie_test.cpp
     keyword_extractor_test.cpp 
     trie_test.cpp 
     segments_test.cpp 
@@ -39,4 +41,4 @@ ADD_EXECUTABLE(test.run
     unicode_path_test.cpp
 )
 
-TARGET_LINK_LIBRARIES(test.run gtest)
+TARGET_LINK_LIBRARIES(test.run gtest Threads::Threads)
