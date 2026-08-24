@@ -14,10 +14,10 @@
 
 - The new implementation is a classic static double-array trie in `include/cppjieba/DoubleArrayTrie.hpp`. Labels are the original `uint32_t` Unicode `Rune` values. Do not add Rune compaction, a packed Darts unit, DAWG minimization, TAIL storage, dynamic CEDAR relocation, a binary on-disk format, a prebuilder, or memory mapping.
 - Slot `0` is the root. The five arrays are `std::vector<int32_t> base_`, `std::vector<int32_t> check_`, `std::vector<uint8_t> terminal_`, `std::vector<double> weight_`, and `std::vector<uint16_t> tag_id_`; they always have identical lengths. `check_[i] == -1` means empty, and `check_[0] == 0` marks the occupied root.
-- A transition is `base_[state] + rune`. `base_` may be negative so sparse raw code points do not force an array indexed directly by Unicode scalar value. Perform candidate-base, transition, capacity, and cast calculations in `int64_t`; return a build error before any negative address or value not representable by `int32_t` is stored.
-- Build from strictly ordered unique keys. Extract siblings from contiguous ordered-key intervals at a given depth, scan free candidate slots for the first sibling, validate the full sibling span, claim all child slots, and recurse. After construction, remove every empty trailing slot from all five arrays and release the temporary word/record vectors used only during construction.
-- The main dictionary determines `freq_sum` and retains the existing `log(freq / freq_sum)` weighting. A constructor-time user row with an explicit frequency uses the same main `freq_sum`; a row without one uses the selected main-dictionary minimum, median, or maximum log weight. Stable Rune sorting plus source ordinals makes the last occurrence from the ordered user-path list win duplicate words.
-- Main rows are exactly `word frequency tag`. User rows are exactly `word`, `word tag`, or `word frequency tag`. Reject blank or wrong-column rows, invalid UTF-8, empty words, nonnumeric/trailing-junk/zero/negative/NaN/infinite frequencies, an empty effective dictionary, more than 65,535 distinct non-empty stored tags, and DAT address overflow. Use fatal `XCHECK` diagnostics at the `DictTrie` construction boundary; keep `DoubleArrayTrie::Build` independently testable through its `bool` plus error string.
+- A transition is `base_[state] + rune`. `base_` may be negative so sparse raw code points do not force an array indexed directly by Unicode scalar value. Slot `0` is root-only: every build-time and lookup-time transition address must be strictly greater than `0`, preventing a negative root base from turning Rune `-base_[0]` into a root self-loop. Perform candidate-base, transition, capacity, and cast calculations in `int64_t`; return a build error before any non-positive address or value not representable by `int32_t` is stored.
+- Build from strictly ordered unique keys. Define one `RuneLexicographicLess` helper with `std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end())`; reuse it for core strict-order validation, dictionary stable sorting, and equality-by-two-comparisons. Extract siblings from contiguous ordered-key intervals at a given depth, scan free candidate slots for the first sibling, validate the full sibling span, claim all child slots, and recurse. After construction, remove every empty trailing slot from all five arrays and release the temporary word/record vectors used only during construction.
+- The main dictionary determines a finite positive `freq_sum` and retains the mathematically equivalent existing `log(freq / freq_sum)` weight as `log(freq) - log(freq_sum)`, avoiding ratio underflow. A constructor-time user row with an explicit frequency uses the same main `freq_sum`; a row without one uses the selected main-dictionary minimum, median, or maximum finite log weight. Reject aggregate frequency overflow and any non-finite computed weight before DAT construction, so DAG edges and MP dynamic programming never receive NaN or infinity. Stable Rune sorting plus source ordinals makes the last occurrence from the ordered user-path list win duplicate words.
+- Main rows are exactly `word frequency tag`. User rows are exactly `word`, `word tag`, or `word frequency tag`. Reject blank or wrong-column rows, invalid UTF-8, empty words, nonnumeric/trailing-junk/zero/negative/NaN/infinite frequencies, non-finite/non-positive aggregate frequency, non-finite weights, an empty effective dictionary, more than 65,535 distinct non-empty stored tags, and DAT address overflow. Use fatal `XCHECK` diagnostics at the `DictTrie` construction boundary; keep `DoubleArrayTrie::Build` independently testable through its `bool` plus error string.
 - `DictionaryData` is immutable after construction. Cache keys contain the exact main path, the ordered constructor user-path vector split on `|` or `;`, and `UserWordWeightOption`. A process-wide mutex protects a map of `weak_ptr<const DictionaryData>`; build outside the lock, then recheck under the lock so racing constructors converge on one live shared object.
 - The deduplicated tag table has `tags[0] == ""`; non-empty tags use IDs `1..65535`. `user_single_runes` contains sorted unique single-Rune words originating from constructor user dictionaries, and membership uses `std::binary_search`.
 - `DictionaryStats` exposes `slot_count`, `occupied_state_count`, `terminal_count`, `load_factor`, `array_bytes`, and `tag_bytes`. `array_bytes` is exactly `slot_count * (sizeof(int32_t) * 2 + sizeof(uint8_t) + sizeof(double) + sizeof(uint16_t))`; `tag_bytes` is the sum of byte lengths of unique stored tag payloads, excluding `std::string` object/capacity overhead.
@@ -90,6 +90,7 @@ Add `double_array_trie_test.cpp` immediately after `gtest_main.cpp` in `test/uni
 
 ```cpp
 #include <stdint.h>
+#include <limits>
 #include <string>
 #include <vector>
 #include "cppjieba/DoubleArrayTrie.hpp"
@@ -155,10 +156,39 @@ TEST(DoubleArrayTrieTest, StoresSparseRunesWithoutFalseTransitions) {
   EXPECT_GT(trie.stats().occupied_state_count, trie.stats().terminal_count);
 }
 
+TEST(DoubleArrayTrieTest, RootSlotCannotBeReachedAsATransition) {
+  std::vector<DoubleArrayTrie::BuildEntry> entries;
+  entries.push_back(Entry("一a", -2.0, 1));
+  entries.push_back(Entry("😀b", -1.0, 2));
+  DoubleArrayTrie trie;
+  std::string error;
+  ASSERT_TRUE(trie.Build(entries, &error)) << error;
+  ASSERT_LT(trie.base_at(0), 0);
+
+  const int64_t phantom_value = -static_cast<int64_t>(trie.base_at(0));
+  ASSERT_GT(phantom_value, 0);
+  ASSERT_LE(phantom_value,
+            static_cast<int64_t>(std::numeric_limits<cppjieba::Rune>::max()));
+  const cppjieba::Rune phantom = static_cast<cppjieba::Rune>(phantom_value);
+  RuneStrArray present = Runes("一a");
+
+  RuneStrArray prefixed;
+  prefixed.push_back(cppjieba::RuneStr(phantom, 0, 1));
+  prefixed.insert(prefixed.end(), present.begin(), present.end());
+  EXPECT_FALSE(trie.ExactMatch(prefixed.begin(), prefixed.end(), NULL, NULL));
+  std::vector<DoubleArrayTrie::Match> matches;
+  trie.CommonPrefixSearch(prefixed.begin(), prefixed.end(), 512, &matches);
+  EXPECT_TRUE(matches.empty());
+
+  RuneStrArray appended = present;
+  appended.push_back(cppjieba::RuneStr(phantom, 0, 1));
+  EXPECT_FALSE(trie.ExactMatch(appended.begin(), appended.end(), NULL, NULL));
+}
+
 TEST(DoubleArrayTrieTest, RejectsUnsortedOrDuplicateBuildKeys) {
   std::vector<DoubleArrayTrie::BuildEntry> entries;
-  entries.push_back(Entry("乙", -1.0, 1));
-  entries.push_back(Entry("甲", -2.0, 2));
+  entries.push_back(Entry("甲", -1.0, 1));
+  entries.push_back(Entry("乙", -2.0, 2));
   DoubleArrayTrie trie;
   std::string error;
   EXPECT_FALSE(trie.Build(entries, &error));
@@ -188,9 +218,14 @@ Expected: compilation fails at `test/unittest/double_array_trie_test.cpp` becaus
 
 - [ ] **Step 3: Add the complete public core contract and five arrays**
 
-Create `include/cppjieba/DoubleArrayTrie.hpp` with self-contained C++11 includes (`<algorithm>`, `<climits>`, `<cstddef>`, `<cstdint>`, `<limits>`, `<string>`, `<vector>`, and `Unicode.hpp`) and this exact public surface:
+Create `include/cppjieba/DoubleArrayTrie.hpp` with self-contained C++11 includes (`<algorithm>`, `<climits>`, `<cmath>`, `<cstddef>`, `<cstdint>`, `<limits>`, `<string>`, `<vector>`, and `Unicode.hpp`) and this exact comparator/public surface. `Unicode` is `LocalVector<Rune>`, so do not assume it defines relational operators:
 
 ```cpp
+inline bool RuneLexicographicLess(const Unicode& lhs, const Unicode& rhs) {
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
 class DoubleArrayTrie {
  public:
   struct BuildEntry {
@@ -256,16 +291,16 @@ Definitions remain inline in the class/header. Empty input is a valid empty core
 
 - [ ] **Step 4: Implement checked address math and synchronized resizing**
 
-Use one helper for every build-time and lookup-time address calculation. It must reject a negative sum, a sum above the configured address limit, a sum above `INT32_MAX`, or a base that cannot fit in `int32_t`:
+Use one transition helper for every build-time and lookup-time address calculation. It must reject address `0` as well as negative sums, sums above the configured address limit, sums above `INT32_MAX`, and bases that cannot fit in `int32_t`:
 
 ```cpp
-bool CheckedAddress(int64_t base, Rune rune, int64_t limit,
-                    int32_t* address, std::string* error) const {
+bool CheckedTransitionAddress(int64_t base, Rune rune, int64_t limit,
+                              int32_t* address, std::string* error) const {
   const int64_t sum = base + static_cast<int64_t>(rune);
   if (base < INT32_MIN || base > INT32_MAX ||
-      sum < 0 || sum > limit || sum > INT32_MAX) {
+      sum <= 0 || sum > limit || sum > INT32_MAX) {
     if (error != NULL) {
-      *error = "DAT address is negative or not representable by int32_t";
+      *error = "DAT transition address must be positive and fit int32_t";
     }
     return false;
   }
@@ -275,7 +310,7 @@ bool CheckedAddress(int64_t base, Rune rune, int64_t limit,
 
 bool EnsureSize(int64_t address, const BuildOptions& options,
                 std::string* error) {
-  if (address < 0 || address > options.max_address || address > INT32_MAX) {
+  if (address <= 0 || address > options.max_address || address > INT32_MAX) {
     if (error != NULL) *error = "DAT address exceeds configured limit";
     return false;
   }
@@ -290,13 +325,13 @@ bool EnsureSize(int64_t address, const BuildOptions& options,
 }
 ```
 
-Initialize all five arrays to length one, set `check_[0] = 0`, and leave every new `check_` entry at `-1`. Validate `BuildOptions::max_address` is in `[0, INT32_MAX]` before placement.
+Initialize all five arrays to length one, set `check_[0] = 0`, and leave every new `check_` entry at `-1`. Root creation is the only path that may occupy address `0`; it does not call either transition helper or `EnsureSize`. Validate `BuildOptions::max_address` is in `[1, INT32_MAX]` before placement.
 
 - [ ] **Step 5: Implement ordered interval extraction and free-base placement**
 
 Use a private `Sibling { Rune label; size_t begin; size_t end; }`. For an interval `[begin, end)` at `depth`, first mark the current state terminal when `entries[begin].word.size() == depth`, advance past that entry, then group the remaining records by `word[depth]`. Because keys are strictly sorted and unique, each group is contiguous.
 
-For a non-empty sibling vector, scan `first_slot` from `max<int64_t>(1, next_check_pos_)`. Compute `candidate_base = first_slot - siblings.front().label` in `int64_t`. For every sibling, call `CheckedAddress(candidate_base, label, options.max_address, ...)`, grow all arrays with `EnsureSize`, and require `check_[address] == -1`. When the entire set fits, store `base_[state]`, claim every child with `check_[address] = state`, update `next_check_pos_` to the first still-empty slot, and recursively place each child interval. If `first_slot` exceeds `options.max_address`, stop scanning and return an address-exhaustion error.
+For a non-empty sibling vector, scan `first_slot` from `max<int64_t>(1, next_check_pos_)`. Compute `candidate_base = first_slot - siblings.front().label` in `int64_t`. For every sibling, call `CheckedTransitionAddress(candidate_base, label, options.max_address, ...)`, grow all arrays with `EnsureSize`, and require `check_[address] == -1`. When the entire set fits, store `base_[state]`, claim every child with `check_[address] = state`, update `next_check_pos_` to the first still-empty slot, and recursively place each child interval. If `first_slot` exceeds `options.max_address`, stop scanning and return an address-exhaustion error.
 
 The recursion must set terminal payload on the state reached by the whole word:
 
@@ -309,11 +344,11 @@ if (entries[cursor].word.size() == depth) {
 }
 ```
 
-Reject an empty word and reject adjacent keys where `!(previous.word < current.word)` under lexicographic Rune comparison, using the diagnostic substring `strict Rune order`. Never derive an address in `size_t` before the signed checks pass.
+Reject an empty word, reject a non-finite `BuildEntry::weight` with `DAT build entry requires finite weight`, and reject adjacent keys where `!RuneLexicographicLess(previous.word, current.word)`, using the diagnostic substring `strict Rune order`. Never use `Unicode::operator<` or derive an address in `size_t` before the signed checks pass.
 
 - [ ] **Step 6: Implement exact and prefix traversal, trimming, and stats**
 
-Traversal starts at state `0`, computes the checked address for each `iterator->rune`, and accepts the transition only if it is in range and `check_[address] == state`. `ExactMatch` returns true only when the final state has `terminal_ != 0`, and copies payloads only into non-null output pointers. `CommonPrefixSearch` clears its output, visits at most `max_word_len` runes, and appends a `Match(consumed, weight_[state], tag_id_[state])` each time it reaches a terminal; traversal order therefore guarantees shortest-first matches.
+Traversal starts at state `0`, calls `CheckedTransitionAddress(base_[state], iterator->rune, INT32_MAX, ...)`, and accepts the transition only when the strictly positive address is in range and `check_[address] == state`. An address of `0` is always a failed transition even though `check_[0] == 0`; this is what blocks Rune `-base_[0]` from looping back to the root. `ExactMatch` returns true only when the final state has `terminal_ != 0`, and copies payloads only into non-null output pointers. `CommonPrefixSearch` clears its output, visits at most `max_word_len` runes, and appends a `Match(consumed, weight_[state], tag_id_[state])` each time it reaches a terminal; traversal order therefore guarantees shortest-first matches.
 
 After placement, repeatedly pop the same last index from all arrays while the length exceeds one and `check_.back() == -1`. Compute stats after trimming:
 
@@ -503,16 +538,39 @@ Declare a `CacheMap` typedef so the iterator compiles in C++11. The only writes 
 
 - [ ] **Step 5: Parse, weight, stable-sort, collapse, intern, and build**
 
-Split the constructor user path string on both `|` and `;`, preserving non-empty path order in `CacheKey::user_paths`. Parse all main rows first and retain their original positive frequencies long enough to compute:
+Split the constructor user path string on both `|` and `;`, preserving non-empty path order in `CacheKey::user_paths`. Parse all main rows first and retain their original positive finite frequencies. Accumulate with a checked next value, reject aggregate overflow, then compute every weight without dividing first:
 
 ```cpp
-freq_sum = sum(main_frequency);
-weight = std::log(main_frequency / freq_sum);
+double freq_sum = 0.0;
+for (size_t i = 0; i < main_frequencies.size(); ++i) {
+  const double next_sum = freq_sum + main_frequencies[i];
+  XCHECK(std::isfinite(next_sum) && next_sum > 0.0)
+      << "aggregate frequency must be finite and greater than zero";
+  freq_sum = next_sum;
+}
+const double log_freq_sum = std::log(freq_sum);
+const auto calculate_log_weight = [log_freq_sum](double frequency) {
+  const double weight = std::log(frequency) - log_freq_sum;
+  XCHECK(std::isfinite(weight)) << "dictionary weight must be finite";
+  return weight;
+};
 ```
 
-Compute the sorted main log-weight vector and select `front()`, `[size / 2]`, or `back()` exactly as the existing implementation does. Parse each user file in path order; rows without a frequency receive the selected default log weight, and rows with a frequency receive `std::log(user_frequency / freq_sum)`.
+Call `calculate_log_weight` for every main and explicit user frequency. Compute the sorted main log-weight vector and select `front()`, `[size / 2]`, or `back()` exactly as the existing implementation does. Parse each user file in path order; rows without a frequency receive the selected finite default log weight. This remains mathematically equivalent to the existing weighting while keeping `DBL_MIN / DBL_MAX` from becoming zero before `log`.
 
-Assign monotonically increasing `source_ordinal` values across main then user records. Use `std::stable_sort` with Rune-vector lexicographic comparison, then collapse equal words by selecting the greatest `source_ordinal`; therefore any user record overrides the main record and the last user occurrence wins across and within files.
+Assign monotonically increasing `source_ordinal` values across main then user records. Reuse the sole comparator from `DoubleArrayTrie.hpp` for stable sorting and equality; do not use relational operators on `Unicode`/`LocalVector`:
+
+```cpp
+std::stable_sort(parsed_words.begin(), parsed_words.end(),
+    [](const ParsedWord& lhs, const ParsedWord& rhs) {
+      return RuneLexicographicLess(lhs.word, rhs.word);
+    });
+const bool same_word =
+    !RuneLexicographicLess(previous.word, current.word) &&
+    !RuneLexicographicLess(current.word, previous.word);
+```
+
+Collapse equal words by selecting the greatest `source_ordinal`; therefore any user record overrides the main record and the last user occurrence wins across and within files.
 
 Initialize `tags` with one empty string. Intern only tags surviving duplicate collapse; reuse an existing ID for duplicate payloads. Create one `DoubleArrayTrie::BuildEntry` per collapsed word. Add each single-Rune winning user word to `user_single_runes`, then sort and unique it. Build the DAT, copy its five-array stats, compute `tag_bytes`, and release construction-only storage before publishing:
 
@@ -644,8 +702,10 @@ for (std::vector<Dag>::reverse_iterator it = dags.rbegin();
   it->next_pos = 0;
   for (LocalVector<DagEdge>::const_iterator edge = it->edges.begin();
        edge != it->edges.end(); ++edge) {
+    assert(std::isfinite(edge->weight));
     double candidate = edge->weight;
     if (edge->end + 1 < dags.size()) candidate += dags[edge->end + 1].weight;
+    assert(std::isfinite(candidate));
     if (candidate > it->weight) {
       it->weight = candidate;
       it->next_pos = edge->end;
@@ -654,7 +714,7 @@ for (std::vector<Dag>::reverse_iterator it = dags.rbegin();
 }
 ```
 
-Do not use `>=`: because `BuildDag` orders edges shortest first, strict `>` preserves the first/shortest edge on a tie. Reconstruct with `WordRange(begin + pos, begin + dags[pos].next_pos)` and then `pos = dags[pos].next_pos + 1`; no word pointer or word-length lookup remains.
+Add `<cmath>` to `MPSegment.hpp`. Dictionary construction and `DoubleArrayTrie::Build` reject every non-finite payload, fallback edges use the validated finite minimum weight, and the assertions above enforce that DP receives and produces only finite values. Do not use `>=`: because `BuildDag` orders edges shortest first, strict `>` preserves the first/shortest edge on a tie. Reconstruct with `WordRange(begin + pos, begin + dags[pos].next_pos)` and then `pos = dags[pos].next_pos + 1`; no word pointer or word-length lookup remains.
 
 Rename the pass-through membership method to `IsUserDictSingleRune` and delegate to `DictTrie::IsUserDictSingleRune`.
 
@@ -786,6 +846,38 @@ TEST(DictTrieDeathTest, RejectsInvalidUtf8AndEmptyEffectiveDictionary) {
   ASSERT_DEATH_IF_SUPPORTED(
       { DictTrie trie(empty.path()); }, "effective dictionary is empty");
 }
+
+TEST(DictTrieDeathTest, RejectsAggregateFrequencyOverflow) {
+  TempFile overflow("frequency-overflow",
+      "large_a 1.7976931348623157e308 n\n"
+      "large_b 1.7976931348623157e308 n\n");
+  ASSERT_DEATH_IF_SUPPORTED(
+      { DictTrie trie(overflow.path()); },
+      "aggregate frequency must be finite and greater than zero");
+}
+
+TEST(DictTrieTest, ExtremeFrequencyRatioKeepsFiniteLogWeight) {
+  TempFile extreme("extreme-ratio",
+      "tiny 2.2250738585072014e-308 n\n"
+      "large 1.7976931348623157e308 n\n");
+  DictTrie trie(extreme.path());
+  RuneStrArray runes;
+  ASSERT_TRUE(DecodeUTF8RunesInString("tiny", runes));
+  std::vector<Dag> dags;
+  trie.BuildDag(runes.begin(), runes.end(), dags);
+  ASSERT_FALSE(dags.empty());
+  ASSERT_FALSE(dags[0].edges.empty());
+  const DagEdge& edge = dags[0].edges.back();
+  ASSERT_TRUE(edge.in_dict);
+
+  const double tiny = std::numeric_limits<double>::min();
+  const double large = std::numeric_limits<double>::max();
+  EXPECT_EQ(0.0, tiny / large);
+  const double expected = std::log(tiny) - std::log(large);
+  EXPECT_TRUE(std::isfinite(expected));
+  EXPECT_TRUE(std::isfinite(edge.weight));
+  EXPECT_NEAR(expected, edge.weight, 1e-12);
+}
 ```
 
 Add table-driven cases for main and three-column user rows containing frequency tokens `0`, `-1`, `nan`, `inf`, and `1x`. Add a main row missing its frequency, a four-column user row, a blank main row, a blank user row, an invalid continuation sequence, an overlong encoding, a UTF-16 surrogate encoding, and a code point above U+10FFFF.
@@ -804,6 +896,15 @@ TEST(DoubleArrayTrieTest, RejectsAddressBeyondConfiguredLimit) {
   EXPECT_FALSE(trie.Build(entries, &error,
                           DoubleArrayTrie::BuildOptions(32)));
   EXPECT_NE(std::string::npos, error.find("address"));
+}
+
+TEST(DoubleArrayTrieTest, RejectsNonFinitePayloadWeight) {
+  std::vector<DoubleArrayTrie::BuildEntry> entries;
+  entries.push_back(Entry("a", std::numeric_limits<double>::infinity(), 1));
+  DoubleArrayTrie trie;
+  std::string error;
+  EXPECT_FALSE(trie.Build(entries, &error));
+  EXPECT_NE(std::string::npos, error.find("finite weight"));
 }
 ```
 
@@ -843,7 +944,7 @@ TEST(DictTrieTest, CacheAndQueriesAreConcurrentReadOnlySafe) {
 }
 ```
 
-Include `<atomic>`, `<memory>`, and `<thread>`. Add `find_package(Threads REQUIRED)` and link `Threads::Threads` to `test.run` in `test/unittest/CMakeLists.txt`.
+Include `<atomic>`, `<cmath>`, `<limits>`, `<memory>`, and `<thread>`. Add `find_package(Threads REQUIRED)` and link `Threads::Threads` to `test.run` in `test/unittest/CMakeLists.txt`.
 
 - [ ] **Step 2: Run the hardening tests to observe RED**
 
@@ -856,11 +957,11 @@ cmake --build build-static-rune-dat --target test.run -j2
   --gtest_filter='DoubleArrayTrieTest.*:DictTrieTest.*:DictTrieDeathTest.*'
 ```
 
-Expected: malformed UTF-8/frequency/row tests fail or fail with the wrong diagnostic until strict validators are added. Any cache race, untrimmed tail, incorrect byte count, tag-boundary, maximum-length, or address-bound error must also remain visible in this RED run.
+Expected: malformed UTF-8/frequency/row tests fail or fail with the wrong diagnostic until strict validators are added. The aggregate-overflow test must expose the old infinite sum, while the extreme-ratio test must expose `log(0)` from divide-before-log weighting. Any cache race, root self-loop, non-finite core payload, untrimmed tail, incorrect byte count, tag-boundary, maximum-length, or address-bound error must also remain visible in this RED run.
 
 - [ ] **Step 3: Add strict row/frequency/UTF-8 validation on the dictionary path**
 
-Tokenize with `std::istringstream` so repeated ASCII whitespace is accepted but missing or extra columns are rejected. Parse frequency with `std::strtod`, reset/check `errno`, require the end pointer to reach the token terminator, require `std::isfinite(value)`, and require `value > 0.0` before summing or taking a logarithm.
+Tokenize with `std::istringstream` so repeated ASCII whitespace is accepted but missing or extra columns are rejected. Parse frequency with `std::strtod`, reset/check `errno`, require the end pointer to reach the token terminator, require `std::isfinite(value)`, and require `value > 0.0` before summing or taking a logarithm. For each main frequency, compute `next_sum = freq_sum + value` and reject unless `next_sum` is finite and positive; validate the final aggregate again before `std::log(freq_sum)`. Calculate main and explicit user weights only as `std::log(value) - std::log(freq_sum)`, reject any non-finite result, and never evaluate `value / freq_sum`.
 
 Dictionary words require a strict UTF-8 validator before the existing Rune decoder. Accept ASCII; accept leading bytes `C2..DF`, `E0..EF`, and `F0..F4` only with the required continuation bytes; enforce `E0` second byte `A0..BF`, `ED` second byte `80..9F`, `F0` second byte `90..BF`, and `F4` second byte `80..8F`. Reject truncated sequences, stray continuations, overlong forms, surrogates, code points above U+10FFFF, and empty decoded words. Include file path and one-based line number in every construction diagnostic.
 
@@ -868,7 +969,7 @@ Reject a zero-row main file as `effective dictionary is empty`. After duplicate 
 
 - [ ] **Step 4: Audit every DAT address and trim invariant**
 
-Route root placement, sibling candidates, recursion, exact lookup, and prefix lookup through the same signed checked-address helper. Never resize from an unchecked address. On any placement failure, leave a useful error string and return false; `BuildDictionaryData` wraps it with `XCHECK` and the `DAT build failed` prefix.
+Create the root directly at slot `0`, then route every child placement, sibling candidate, recursion, exact lookup, and prefix lookup through `CheckedTransitionAddress`, which rejects `address <= 0`. Never pass root creation through this helper and never resize from an unchecked address. On any placement failure, leave a useful error string and return false; `BuildDictionaryData` wraps it with `XCHECK` and the `DAT build failed` prefix. The root-self-loop regression must fail exact and prefix lookup for the prepended phantom Rune even though `check_[0] == 0` and `base_[0] < 0`.
 
 After trimming, assert in debug builds that all five array sizes match and that either only the root exists or `check_.back() != -1`. Recompute stats only after trimming. Confirm the configured-limit test fails before allocation and that the normal sparse-code-point test still uses a negative root base.
 
@@ -1074,12 +1175,13 @@ If no release is published, create no downstream issues. Once this repository ha
 ## Final implementation evidence checklist
 
 - [ ] The new DAT is repository-owned, C++11, header-only, raw-Rune, five-array, static, and free of every excluded representation or persistence feature.
-- [ ] All build and traversal addresses use signed 64-bit intermediates; failures occur before negative/unrepresentable allocation or casts.
-- [ ] Main plus constructor user dictionaries have existing log weights, stable Rune sorting, deterministic duplicate precedence, tag interning, and sorted unique user single Runes.
+- [ ] All build and traversal addresses use signed 64-bit intermediates; slot `0` remains root-only, and failures occur before non-positive/unrepresentable transition allocation or casts.
+- [ ] `RuneLexicographicLess` is the only word-order comparator and uses iterator-based `std::lexicographical_compare` for `LocalVector` in core validation and dictionary sorting/deduplication.
+- [ ] Main plus constructor user dictionaries have finite positive aggregate frequency, finite `log(freq) - log(freq_sum)` weights, stable Rune sorting, deterministic duplicate precedence, tag interning, and sorted unique user single Runes.
 - [ ] Cache identity includes main path, ordered user paths, and weight option; shared data is immutable and the cache stores weak references under a mutex.
 - [ ] `DagEdge` has only `end`, `weight`, and `in_dict`; MP strict-tie, Full inclusion, Query exact lookup, POS tag lookup, and Mix single-Rune behavior match their specified algorithms.
 - [ ] Runtime mutation signatures remain callable but reject/no-op with `ERROR`; constructor-time user dictionaries still affect Cut and Tag.
-- [ ] Prefix, sparse Rune, collision, missing transition, duplicate, maximum length, user single Rune, tag, malformed row, UTF-8, frequency, empty dictionary, tag/address boundary, stats, cache, and concurrent reads have explicit tests.
+- [ ] Prefix, root-self-loop, sparse Rune, collision, missing transition, duplicate, maximum length, user single Rune, tag, malformed row, UTF-8, individual/aggregate frequency, ratio underflow, empty dictionary, tag/address boundary, stats, cache, and concurrent reads have explicit tests.
 - [ ] Existing MP, Mix, Full, Query, POS, Jieba, and KeywordExtractor goldens pass unchanged.
 - [ ] Fresh Release CTest and Bazel smoke pass; five-run DAT stats/build/cut/find evidence is reported against the recorded baseline.
 - [ ] A release is withheld unless RSS clearly decreases; a published major release is followed by nodejieba, gojieba, and simhash upgrade issues.
