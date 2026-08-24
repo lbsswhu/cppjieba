@@ -15,5 +15,6 @@ tmp
 t.*
 *.pid
 build
+.worktrees/
 Testing/Temporary/CTestCostData.txt
 Testing/Temporary/LastTest.log
