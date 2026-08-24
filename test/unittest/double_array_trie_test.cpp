@@ -140,5 +140,59 @@ TEST(DoubleArrayTrieTest, RejectsNonFinitePayloadWeight) {
   EXPECT_NE(std::string::npos, error.find("finite weight"));
 }
 
+TEST(DoubleArrayTrieTest, AddressLimitFailurePreservesPriorBuild) {
+  std::vector<DoubleArrayTrie::BuildEntry> initial_entries;
+  initial_entries.push_back(Entry("a", -1.0, 7));
+
+  DoubleArrayTrie trie;
+  std::string error;
+  ASSERT_TRUE(trie.Build(initial_entries, &error)) << error;
+  const DoubleArrayTrie::Stats initial_stats = trie.stats();
+
+  RuneStrArray present = DecodeText("a");
+  double weight = 0.0;
+  uint16_t tag_id = 0;
+  ASSERT_TRUE(trie.ExactMatch(present.begin(), present.end(),
+                              &weight, &tag_id));
+  EXPECT_DOUBLE_EQ(-1.0, weight);
+  EXPECT_EQ(7u, tag_id);
+
+  std::vector<DoubleArrayTrie::BuildEntry> limited_entries;
+  limited_entries.push_back(Entry("a", -2.0, 8));
+  limited_entries.push_back(Entry("😀", -3.0, 9));
+  EXPECT_FALSE(trie.Build(limited_entries, &error,
+                          DoubleArrayTrie::BuildOptions(32)));
+  EXPECT_NE(std::string::npos, error.find("address"));
+
+  EXPECT_EQ(initial_stats.slot_count, trie.stats().slot_count);
+  EXPECT_EQ(initial_stats.occupied_state_count,
+            trie.stats().occupied_state_count);
+  EXPECT_EQ(initial_stats.terminal_count, trie.stats().terminal_count);
+  EXPECT_DOUBLE_EQ(initial_stats.load_factor, trie.stats().load_factor);
+  EXPECT_EQ(initial_stats.array_bytes, trie.stats().array_bytes);
+  EXPECT_TRUE(trie.ExactMatch(present.begin(), present.end(),
+                              &weight, &tag_id));
+  EXPECT_DOUBLE_EQ(-1.0, weight);
+  EXPECT_EQ(7u, tag_id);
+  EXPECT_TRUE(trie.last_slot_occupied());
+}
+
+TEST(DoubleArrayTrieTest, TrimmedStatsMatchPackedArraysExactly) {
+  std::vector<DoubleArrayTrie::BuildEntry> entries;
+  entries.push_back(Entry("a", -3.0, 1));
+  entries.push_back(Entry("ab", -2.0, 2));
+  entries.push_back(Entry("b", -1.0, 1));
+
+  DoubleArrayTrie trie;
+  std::string error;
+  ASSERT_TRUE(trie.Build(entries, &error)) << error;
+
+  const DoubleArrayTrie::Stats& stats = trie.stats();
+  EXPECT_EQ(3u, stats.terminal_count);
+  EXPECT_LE(stats.occupied_state_count, stats.slot_count);
+  EXPECT_EQ(stats.slot_count * 19u, stats.array_bytes);
+  EXPECT_TRUE(trie.last_slot_occupied());
+}
+
 }  // namespace
 }  // namespace cppjieba

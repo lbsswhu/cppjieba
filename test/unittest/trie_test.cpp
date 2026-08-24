@@ -3,10 +3,13 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <iomanip>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "cppjieba/DictTrie.hpp"
@@ -85,21 +88,27 @@ DagEdge FullWordEdge(const DictTrie& trie, const std::string& word) {
   return DagEdge();
 }
 
+std::string NumberedWord(size_t index) {
+  std::ostringstream stream;
+  stream << "word" << std::setw(5) << std::setfill('0') << index;
+  return stream.str();
+}
+
+std::string NumberedTag(size_t index) {
+  std::ostringstream stream;
+  stream << "tag" << std::setw(5) << std::setfill('0') << index;
+  return stream.str();
+}
+
+std::string BuildTaggedUserDictionary(size_t count) {
+  std::ostringstream stream;
+  for (size_t i = 0; i < count; ++i) {
+    stream << NumberedWord(i) << ' ' << NumberedTag(i) << '\n';
+  }
+  return stream.str();
+}
+
 }  // namespace
-
-TEST(TrieTest, Empty) {
-  vector<Unicode> keys;
-  vector<const DictUnit*> values;
-  Trie trie(keys, values);
-}
-
-TEST(TrieTest, Construct) {
-  vector<Unicode> keys;
-  vector<const DictUnit*> values;
-  keys.push_back(DecodeUTF8RunesInString("你"));
-  values.push_back((const DictUnit*)(NULL));
-  Trie trie(keys, values);
-}
 
 TEST(DictTrieTest, NewAndDelete) {
   DictTrie* trie = new DictTrie(DICT_FILE);
@@ -291,6 +300,122 @@ TEST(DictTrieTest, CacheIdentityIncludesPathsAndWeightOption) {
   EXPECT_EQ(16u, stats.tag_bytes);
 }
 
+TEST(DictTrieTest, ConcurrentConstructionAndReadsShareImmutableData) {
+  TempFile user_dict("concurrent_user", "并发词 concurrent\n");
+  const size_t thread_count = 8;
+  std::vector<std::unique_ptr<DictTrie> > tries(thread_count);
+  std::vector<std::thread> constructors;
+  std::atomic<size_t> ready_count(0);
+  std::atomic<bool> start(false);
+  for (size_t i = 0; i < thread_count; ++i) {
+    constructors.push_back(std::thread(
+        [&tries, &user_dict, &ready_count, &start, i]() {
+      ready_count.fetch_add(1);
+      while (!start.load()) {
+        std::this_thread::yield();
+      }
+      tries[i].reset(new DictTrie(DICT_FILE, user_dict.path()));
+    }));
+  }
+  while (ready_count.load() != thread_count) {
+    std::this_thread::yield();
+  }
+  start.store(true);
+  for (size_t i = 0; i < constructors.size(); ++i) {
+    constructors[i].join();
+  }
+
+  const void* identity = tries[0]->GetDictionaryDataIdentity();
+  for (size_t i = 1; i < tries.size(); ++i) {
+    ASSERT_EQ(identity, tries[i]->GetDictionaryDataIdentity());
+  }
+
+  std::atomic<bool> ok(true);
+  std::vector<std::thread> readers;
+  for (size_t i = 0; i < thread_count; ++i) {
+    readers.push_back(std::thread([&tries, &ok, i]() {
+      for (size_t iteration = 0; iteration < 1000; ++iteration) {
+        if (!tries[i]->Find("来到") ||
+            tries[i]->Find("肯定不存在的词")) {
+          ok.store(false);
+          return;
+        }
+      }
+    }));
+  }
+  for (size_t i = 0; i < readers.size(); ++i) {
+    readers[i].join();
+  }
+  EXPECT_TRUE(ok.load());
+}
+
+TEST(DictTrieTest, RepeatedAsciiWhitespaceIsAccepted) {
+  TempFile main_dict("whitespace_main", "甲\t  100   n  \n");
+  TempFile user_dict("whitespace_user", "乙  \t 10 \t user  \n");
+  DictTrie trie(main_dict.path(), user_dict.path());
+
+  EXPECT_TRUE(trie.Find("甲"));
+  RuneStrArray user_word = DecodeText("乙");
+  std::string tag;
+  ASSERT_TRUE(trie.FindTag(user_word.begin(), user_word.end(), &tag));
+  EXPECT_EQ("user", tag);
+}
+
+TEST(DictTrieTest, MaximumTagIdCapacityIsUsable) {
+  const size_t tag_count = 65535;
+  TempFile main_dict("tag_capacity_main", "word00000 100 main\n");
+  TempFile user_dict("tag_capacity_user",
+                     BuildTaggedUserDictionary(tag_count));
+  DictTrie trie(main_dict.path(), user_dict.path());
+
+  EXPECT_EQ(tag_count, trie.GetStats().terminal_count);
+  const std::string last_word = NumberedWord(tag_count - 1);
+  RuneStrArray runes = DecodeText(last_word);
+  std::string tag;
+  ASSERT_TRUE(trie.FindTag(runes.begin(), runes.end(), &tag));
+  EXPECT_EQ(NumberedTag(tag_count - 1), tag);
+}
+
+TEST(DictTrieTest, DagHonorsConfiguredLimitAt513Runes) {
+  const std::string long_word(513, 'a');
+  TempFile main_dict("long_word", long_word + " 100 long\n");
+  DictTrie trie(main_dict.path());
+  RuneStrArray runes = DecodeText(long_word);
+  ASSERT_EQ(513u, runes.size());
+
+  std::vector<Dag> limited;
+  trie.BuildDag(runes.begin(), runes.end(), limited, 512);
+  ASSERT_EQ(513u, limited.size());
+  for (LocalVector<DagEdge>::const_iterator iter = limited[0].edges.begin();
+       iter != limited[0].edges.end(); ++iter) {
+    EXPECT_FALSE(iter->in_dict && iter->end == 512u);
+  }
+
+  std::vector<Dag> complete;
+  trie.BuildDag(runes.begin(), runes.end(), complete, 513);
+  ASSERT_EQ(513u, complete.size());
+  bool found_full_word = false;
+  for (LocalVector<DagEdge>::const_iterator iter = complete[0].edges.begin();
+       iter != complete[0].edges.end(); ++iter) {
+    if (iter->in_dict && iter->end == 512u) {
+      found_full_word = true;
+    }
+  }
+  EXPECT_TRUE(found_full_word);
+}
+
+TEST(DictTrieTest, DuplicateCollapseProducesExactStats) {
+  TempFile main_dict("stats_main", "甲 100 old\n乙 50 shared\n");
+  TempFile user_dict("stats_user", "甲 10 final\n丙 shared\n");
+  DictTrie trie(main_dict.path(), user_dict.path());
+
+  const DictionaryStats& stats = trie.GetStats();
+  EXPECT_EQ(3u, stats.terminal_count);
+  EXPECT_LE(stats.occupied_state_count, stats.slot_count);
+  EXPECT_EQ(stats.slot_count * 19u, stats.array_bytes);
+  EXPECT_EQ(11u, stats.tag_bytes);
+}
+
 TEST(DictTrieTest, ExtremeFrequencyRatioKeepsFiniteLogWeight) {
   TempFile main_dict(
       "extreme_ratio",
@@ -314,7 +439,7 @@ TEST(DictTrieDeathTest, RejectsOverflowingAggregateFrequency) {
       {
         DictTrie trie(main_dict.path());
       },
-      "aggregate frequency must be finite and greater than zero");
+      "aggregate frequency must be finite and greater than zero at [^:]+:2");
 }
 
 TEST(DictTrieDeathTest, RejectsOutOfRangeMainFrequency) {
@@ -359,6 +484,70 @@ TEST(DictTrieDeathTest, RejectsMalformedOrInvalidMainRows) {
       "frequency must be finite and greater than zero");
 }
 
+TEST(DictTrieDeathTest, RejectsEveryInvalidMainFrequencyTokenAtSource) {
+  const char* const invalid_frequencies[] = {
+      "0", "-1", "nan", "inf", "1x", "1e-323"};
+  for (size_t i = 0;
+       i < sizeof(invalid_frequencies) / sizeof(invalid_frequencies[0]); ++i) {
+    TempFile main_dict(
+        "main_frequency",
+        std::string("甲 ") + invalid_frequencies[i] + " n\n");
+    EXPECT_DEATH(
+        {
+          DictTrie trie(main_dict.path());
+        },
+        "frequency must be finite and greater than zero at [^:]+:1");
+  }
+}
+
+TEST(DictTrieDeathTest, RejectsMainColumnAndBlankRowErrorsAtSource) {
+  const char* const invalid_rows[] = {
+      "甲 n\n",
+      "甲 10 n extra\n",
+      "\n",
+      " \t  \n",
+  };
+  for (size_t i = 0;
+       i < sizeof(invalid_rows) / sizeof(invalid_rows[0]); ++i) {
+    TempFile main_dict("main_row", invalid_rows[i]);
+    EXPECT_DEATH(
+        {
+          DictTrie trie(main_dict.path());
+        },
+        "main dictionary row must contain exactly word frequency tag at [^:]+:1");
+  }
+}
+
+TEST(DictTrieDeathTest, RejectsInvalidUtf8MainWordsAtSource) {
+  const std::string invalid_words[] = {
+      std::string("\x80", 1),
+      std::string("\xff", 1),
+      std::string("\xc2", 1) + "A",
+      std::string("\xe2\x82", 2),
+      std::string("\xc0\xaf", 2),
+      std::string("\xed\xa0\x80", 3),
+      std::string("\xf4\x90\x80\x80", 4),
+  };
+  for (size_t i = 0;
+       i < sizeof(invalid_words) / sizeof(invalid_words[0]); ++i) {
+    TempFile main_dict("main_utf8", invalid_words[i] + " 10 n\n");
+    EXPECT_DEATH(
+        {
+          DictTrie trie(main_dict.path());
+        },
+        "dictionary word must be nonempty valid UTF-8 at [^:]+:1");
+  }
+}
+
+TEST(DictTrieDeathTest, RejectsEmptyMainDictionaryWithStableDiagnostic) {
+  TempFile main_dict("empty_main", "");
+  EXPECT_DEATH(
+      {
+        DictTrie trie(main_dict.path());
+      },
+      "effective dictionary is empty");
+}
+
 TEST(DictTrieDeathTest, RejectsMalformedOrInvalidUserRows) {
   TempFile main_dict("user_validation_main", "甲 100 n\n");
   TempFile malformed("user_malformed", "乙 10 n extra\n");
@@ -374,4 +563,72 @@ TEST(DictTrieDeathTest, RejectsMalformedOrInvalidUserRows) {
         DictTrie trie(main_dict.path(), invalid_frequency.path());
       },
       "frequency must be finite and greater than zero");
+}
+
+TEST(DictTrieDeathTest, RejectsEveryInvalidUserFrequencyTokenAtSource) {
+  TempFile main_dict("user_frequency_main", "甲 100 n\n");
+  const char* const invalid_frequencies[] = {
+      "0", "-1", "nan", "inf", "1x", "1e-323"};
+  for (size_t i = 0;
+       i < sizeof(invalid_frequencies) / sizeof(invalid_frequencies[0]); ++i) {
+    TempFile user_dict(
+        "user_frequency",
+        std::string("乙 ") + invalid_frequencies[i] + " u\n");
+    EXPECT_DEATH(
+        {
+          DictTrie trie(main_dict.path(), user_dict.path());
+        },
+        "frequency must be finite and greater than zero at [^:]+:1");
+  }
+}
+
+TEST(DictTrieDeathTest, RejectsUserColumnAndBlankRowErrorsAtSource) {
+  TempFile main_dict("user_row_main", "甲 100 n\n");
+  const char* const invalid_rows[] = {
+      "乙 10 u extra\n",
+      "\n",
+      " \t  \n",
+  };
+  for (size_t i = 0;
+       i < sizeof(invalid_rows) / sizeof(invalid_rows[0]); ++i) {
+    TempFile user_dict("user_row", invalid_rows[i]);
+    EXPECT_DEATH(
+        {
+          DictTrie trie(main_dict.path(), user_dict.path());
+        },
+        "user dictionary row must contain word, word tag, or word frequency tag at [^:]+:1");
+  }
+}
+
+TEST(DictTrieDeathTest, RejectsInvalidUtf8UserWordsAtSource) {
+  TempFile main_dict("user_utf8_main", "甲 100 n\n");
+  const std::string invalid_words[] = {
+      std::string("\x80", 1),
+      std::string("\xff", 1),
+      std::string("\xc2", 1) + "A",
+      std::string("\xe2\x82", 2),
+      std::string("\xc0\xaf", 2),
+      std::string("\xed\xa0\x80", 3),
+      std::string("\xf4\x90\x80\x80", 4),
+  };
+  for (size_t i = 0;
+       i < sizeof(invalid_words) / sizeof(invalid_words[0]); ++i) {
+    TempFile user_dict("user_utf8", invalid_words[i] + " tag\n");
+    EXPECT_DEATH(
+        {
+          DictTrie trie(main_dict.path(), user_dict.path());
+        },
+        "dictionary word must be nonempty valid UTF-8 at [^:]+:1");
+  }
+}
+
+TEST(DictTrieDeathTest, RejectsMoreThan65535SurvivingNonEmptyTags) {
+  TempFile main_dict("tag_overflow_main", "word00000 100 main\n");
+  TempFile user_dict("tag_overflow_user",
+                     BuildTaggedUserDictionary(65536));
+  EXPECT_DEATH(
+      {
+        DictTrie trie(main_dict.path(), user_dict.path());
+      },
+      "more than 65535 non-empty tags");
 }

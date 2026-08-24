@@ -293,7 +293,7 @@ TEST(FullSegment, Test1) {
   ASSERT_EQ(s, "[\"上市\", \"公司\", \"C\", \"E\", \"O\"]");
 }
 
-TEST(FullSegment, NullDictUnitDoesNotSkipFollowingRune) {
+TEST(FullSegment, MissingDictionaryEntryDoesNotSkipFollowingRune) {
   FullSegment segment(DICT_DIR "/jieba.dict.utf8");
   vector<string> words;
 

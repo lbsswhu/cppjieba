@@ -387,12 +387,13 @@ class DictTrie {
 
       const double next_sum = *freq_sum + parsed.weight;
       XCHECK(std::isfinite(next_sum) && next_sum > 0.0)
-          << "aggregate frequency must be finite and greater than zero";
+          << "aggregate frequency must be finite and greater than zero at "
+          << path << ':' << line_number;
       *freq_sum = next_sum;
       words->push_back(parsed);
     }
 
-    XCHECK(!words->empty()) << "dict file is empty: " << path;
+    XCHECK(!words->empty()) << "effective dictionary is empty";
     XCHECK(std::isfinite(*freq_sum) && *freq_sum > 0.0)
         << "aggregate frequency must be finite and greater than zero";
 
@@ -422,9 +423,6 @@ class DictTrie {
       size_t line_number = 0;
       while (std::getline(ifs, line)) {
         ++line_number;
-        if (line.empty()) {
-          continue;
-        }
         const std::vector<std::string> fields = TokenizeDictionaryRow(line);
         XCHECK(fields.size() >= 1 && fields.size() <= 3)
             << "user dictionary row must contain word, word tag, or word "
@@ -475,8 +473,9 @@ class DictTrie {
       return found->second;
     }
 
-    XCHECK(tags->size() <= std::numeric_limits<uint16_t>::max())
-        << "dictionary tag count exceeds uint16 payload capacity";
+    XCHECK(tag.empty() ||
+           tags->size() <= std::numeric_limits<uint16_t>::max())
+        << "more than 65535 non-empty tags";
     const uint16_t tag_id = static_cast<uint16_t>(tags->size());
     tags->push_back(tag);
     tag_ids->insert(std::make_pair(tag, tag_id));
@@ -525,6 +524,7 @@ class DictTrie {
       survivors.push_back(parsed_words[winner]);
       group_begin = group_end;
     }
+    XCHECK(!survivors.empty()) << "effective dictionary is empty";
 
     std::shared_ptr<DictionaryData> data(new DictionaryData);
     data->min_weight = min_weight;
@@ -580,6 +580,7 @@ class DictTrie {
     static Cache cache;
     static std::mutex cache_mutex;
 
+    // Build outside the mutex, then converge on the published live value.
     {
       std::lock_guard<std::mutex> lock(cache_mutex);
       typename Cache::iterator found = cache.find(key);
@@ -621,7 +622,7 @@ class DictTrie {
     key.weight_option = user_word_weight_opt;
     data_ = GetDictionaryData(key);
     XCHECK(data_ && data_->stats.terminal_count != 0)
-        << "effective dictionary must not be empty";
+        << "effective dictionary is empty";
   }
 
   std::shared_ptr<const DictionaryData> data_;

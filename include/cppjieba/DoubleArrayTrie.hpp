@@ -2,6 +2,7 @@
 #define CPPJIEBA_DOUBLE_ARRAY_TRIE_HPP
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -342,7 +343,8 @@ class DoubleArrayTrie {
     }
     const int64_t address = static_cast<int64_t>(base_[state]) +
                             static_cast<int64_t>(rune);
-    if (address <= 0 || address > INT32_MAX ||
+    if (address <= 0 || address > max_address_ ||
+        address > INT32_MAX ||
         address >= static_cast<int64_t>(check_.size())) {
       return false;
     }
@@ -365,6 +367,11 @@ class DoubleArrayTrie {
     terminal_.resize(size);
     weight_.resize(size);
     tag_id_.resize(size);
+    assert(base_.size() == check_.size());
+    assert(base_.size() == terminal_.size());
+    assert(base_.size() == weight_.size());
+    assert(base_.size() == tag_id_.size());
+    assert(check_.size() == 1 || check_.back() != -1);
   }
 
   void RecomputeStats() {
