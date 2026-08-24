@@ -201,6 +201,15 @@ TEST(DoubleArrayTrieTest, RejectsUnsortedOrDuplicateBuildKeys) {
   EXPECT_FALSE(trie.Build(entries, &error));
   EXPECT_NE(std::string::npos, error.find("strict Rune order"));
 }
+
+TEST(DoubleArrayTrieTest, RejectsNonFinitePayloadWeight) {
+  std::vector<DoubleArrayTrie::BuildEntry> entries;
+  entries.push_back(Entry("a", std::numeric_limits<double>::infinity(), 1));
+  DoubleArrayTrie trie;
+  std::string error;
+  EXPECT_FALSE(trie.Build(entries, &error));
+  EXPECT_NE(std::string::npos, error.find("finite weight"));
+}
 ```
 
 The four keys in the sparse test force sibling-range placement and overlapping descendant candidates; successful exact matches plus the missing cross-branch transition exercise `check_` collision protection. Keep the source order Rune-lexicographic (`一...` before `😀...`).
@@ -214,7 +223,7 @@ cmake -S . -B build-static-rune-dat -DCMAKE_BUILD_TYPE=Release
 cmake --build build-static-rune-dat --target test.run -j2
 ```
 
-Expected: compilation fails at `test/unittest/double_array_trie_test.cpp` because `cppjieba/DoubleArrayTrie.hpp` does not exist. Preserve that failure in the task log before adding the header.
+Expected: compilation fails at `test/unittest/double_array_trie_test.cpp` because `cppjieba/DoubleArrayTrie.hpp` does not exist. This is the required RED result for the full core contract, including rejection of a non-finite payload; preserve it in the task log before adding the header or its finite-weight check.
 
 - [ ] **Step 3: Add the complete public core contract and five arrays**
 
@@ -375,7 +384,7 @@ cmake --build build-static-rune-dat --target test.run -j2
 ./build-static-rune-dat/test/test.run --gtest_filter='DoubleArrayTrieTest.*'
 ```
 
-Expected: all `DoubleArrayTrieTest` cases pass, with no sanitizer, assertion, or logging output.
+Expected: all `DoubleArrayTrieTest` cases pass, including `RejectsNonFinitePayloadWeight` with the `finite weight` diagnostic, with no sanitizer, assertion, or logging output.
 
 - [ ] **Step 8: Commit and immediately push Task 1**
 
@@ -457,16 +466,53 @@ TEST(DictTrieTest, SharesOnlyIdenticalConstructorInputs) {
 }
 ```
 
+Add `<cmath>` and `<limits>` to `test/unittest/trie_test.cpp`, then add the aggregate-overflow and divide-before-log underflow contracts before changing dictionary arithmetic:
+
+```cpp
+TEST(DictTrieDeathTest, RejectsAggregateFrequencyOverflow) {
+  TempFile overflow("frequency-overflow",
+      "large_a 1.7976931348623157e308 n\n"
+      "large_b 1.7976931348623157e308 n\n");
+  ASSERT_DEATH_IF_SUPPORTED(
+      { DictTrie trie(overflow.path()); },
+      "aggregate frequency must be finite and greater than zero");
+}
+
+TEST(DictTrieTest, ExtremeFrequencyRatioKeepsFiniteLogWeight) {
+  TempFile extreme("extreme-ratio",
+      "tiny 2.2250738585072014e-308 n\n"
+      "large 1.7976931348623157e308 n\n");
+  DictTrie trie(extreme.path());
+  RuneStrArray runes;
+  ASSERT_TRUE(DecodeUTF8RunesInString("tiny", runes));
+  std::vector<Dag> dags;
+  trie.BuildDag(runes.begin(), runes.end(), dags);
+  ASSERT_FALSE(dags.empty());
+  ASSERT_FALSE(dags[0].edges.empty());
+  const DagEdge& edge = dags[0].edges.back();
+  ASSERT_TRUE(edge.in_dict);
+
+  const double tiny = std::numeric_limits<double>::min();
+  const double large = std::numeric_limits<double>::max();
+  EXPECT_EQ(0.0, tiny / large);
+  const double expected = std::log(tiny) - std::log(large);
+  EXPECT_TRUE(std::isfinite(expected));
+  EXPECT_TRUE(std::isfinite(edge.weight));
+  EXPECT_NEAR(expected, edge.weight, 1e-12);
+}
+```
+
 - [ ] **Step 2: Build and run the new dictionary tests to observe RED**
 
 Run:
 
 ```bash
 cmake --build build-static-rune-dat --target test.run -j2
-./build-static-rune-dat/test/test.run --gtest_filter='DictTrieTest.*'
+./build-static-rune-dat/test/test.run \
+  --gtest_filter='DictTrieTest.*:DictTrieDeathTest.*'
 ```
 
-Expected: compilation fails because `Contains`, `BuildDag`, `FindTag`, `IsUserDictSingleRune`, `DictionaryStats`, and cache identity introspection are not yet defined.
+Expected: compilation fails because `Contains`, `BuildDag`, `FindTag`, `IsUserDictSingleRune`, `DictionaryStats`, and cache identity introspection are not yet defined. This is the required RED result for both numeric contracts as well: no aggregate-overflow rejection or finite extreme-ratio DAG weight has been implemented. Preserve the failure before Step 5 adds checked accumulation and divide-free log arithmetic.
 
 - [ ] **Step 3: Add value DAG types beside legacy types for one migration commit**
 
@@ -613,10 +659,10 @@ Run:
 ```bash
 cmake --build build-static-rune-dat --target test.run -j2
 ./build-static-rune-dat/test/test.run \
-  --gtest_filter='DoubleArrayTrieTest.*:DictTrieTest.*'
+  --gtest_filter='DoubleArrayTrieTest.*:DictTrieTest.*:DictTrieDeathTest.*'
 ```
 
-Expected: all core and dictionary tests pass. Confirm the duplicate test returns tag `last`, its DAG edge weight is `log(10/150)`, and identical cache keys expose the same identity.
+Expected: all core and dictionary tests pass. Confirm the aggregate-overflow child terminates with the specified diagnostic, the extreme-ratio edge equals finite `log(DBL_MIN) - log(DBL_MAX)`, the duplicate test returns tag `last` with DAG weight `log(10/150)`, and identical cache keys expose the same identity.
 
 - [ ] **Step 8: Commit and immediately push Task 2**
 
@@ -812,7 +858,7 @@ Record the release assessment as major because runtime mutators now reject calls
 - Modify: `test/unittest/trie_test.cpp`
 - Modify: `test/unittest/CMakeLists.txt`
 
-- [ ] **Step 1: Add strict parser, overflow, max-length, stats, and concurrent-read tests first**
+- [ ] **Step 1: Add strict parser, address/tag overflow, max-length, stats, and concurrent-read tests first**
 
 Use `ASSERT_DEATH_IF_SUPPORTED` with stable diagnostic substrings for malformed dictionary construction. Generate temporary inputs as exact bytes so no persistent fixtures are needed:
 
@@ -846,38 +892,6 @@ TEST(DictTrieDeathTest, RejectsInvalidUtf8AndEmptyEffectiveDictionary) {
   ASSERT_DEATH_IF_SUPPORTED(
       { DictTrie trie(empty.path()); }, "effective dictionary is empty");
 }
-
-TEST(DictTrieDeathTest, RejectsAggregateFrequencyOverflow) {
-  TempFile overflow("frequency-overflow",
-      "large_a 1.7976931348623157e308 n\n"
-      "large_b 1.7976931348623157e308 n\n");
-  ASSERT_DEATH_IF_SUPPORTED(
-      { DictTrie trie(overflow.path()); },
-      "aggregate frequency must be finite and greater than zero");
-}
-
-TEST(DictTrieTest, ExtremeFrequencyRatioKeepsFiniteLogWeight) {
-  TempFile extreme("extreme-ratio",
-      "tiny 2.2250738585072014e-308 n\n"
-      "large 1.7976931348623157e308 n\n");
-  DictTrie trie(extreme.path());
-  RuneStrArray runes;
-  ASSERT_TRUE(DecodeUTF8RunesInString("tiny", runes));
-  std::vector<Dag> dags;
-  trie.BuildDag(runes.begin(), runes.end(), dags);
-  ASSERT_FALSE(dags.empty());
-  ASSERT_FALSE(dags[0].edges.empty());
-  const DagEdge& edge = dags[0].edges.back();
-  ASSERT_TRUE(edge.in_dict);
-
-  const double tiny = std::numeric_limits<double>::min();
-  const double large = std::numeric_limits<double>::max();
-  EXPECT_EQ(0.0, tiny / large);
-  const double expected = std::log(tiny) - std::log(large);
-  EXPECT_TRUE(std::isfinite(expected));
-  EXPECT_TRUE(std::isfinite(edge.weight));
-  EXPECT_NEAR(expected, edge.weight, 1e-12);
-}
 ```
 
 Add table-driven cases for main and three-column user rows containing frequency tokens `0`, `-1`, `nan`, `inf`, and `1x`. Add a main row missing its frequency, a four-column user row, a blank main row, a blank user row, an invalid continuation sequence, an overlong encoding, a UTF-16 surrogate encoding, and a code point above U+10FFFF.
@@ -896,15 +910,6 @@ TEST(DoubleArrayTrieTest, RejectsAddressBeyondConfiguredLimit) {
   EXPECT_FALSE(trie.Build(entries, &error,
                           DoubleArrayTrie::BuildOptions(32)));
   EXPECT_NE(std::string::npos, error.find("address"));
-}
-
-TEST(DoubleArrayTrieTest, RejectsNonFinitePayloadWeight) {
-  std::vector<DoubleArrayTrie::BuildEntry> entries;
-  entries.push_back(Entry("a", std::numeric_limits<double>::infinity(), 1));
-  DoubleArrayTrie trie;
-  std::string error;
-  EXPECT_FALSE(trie.Build(entries, &error));
-  EXPECT_NE(std::string::npos, error.find("finite weight"));
 }
 ```
 
@@ -944,7 +949,7 @@ TEST(DictTrieTest, CacheAndQueriesAreConcurrentReadOnlySafe) {
 }
 ```
 
-Include `<atomic>`, `<cmath>`, `<limits>`, `<memory>`, and `<thread>`. Add `find_package(Threads REQUIRED)` and link `Threads::Threads` to `test.run` in `test/unittest/CMakeLists.txt`.
+Include `<atomic>`, `<memory>`, and `<thread>`. Add `find_package(Threads REQUIRED)` and link `Threads::Threads` to `test.run` in `test/unittest/CMakeLists.txt`.
 
 - [ ] **Step 2: Run the hardening tests to observe RED**
 
@@ -957,11 +962,11 @@ cmake --build build-static-rune-dat --target test.run -j2
   --gtest_filter='DoubleArrayTrieTest.*:DictTrieTest.*:DictTrieDeathTest.*'
 ```
 
-Expected: malformed UTF-8/frequency/row tests fail or fail with the wrong diagnostic until strict validators are added. The aggregate-overflow test must expose the old infinite sum, while the extreme-ratio test must expose `log(0)` from divide-before-log weighting. Any cache race, root self-loop, non-finite core payload, untrimmed tail, incorrect byte count, tag-boundary, maximum-length, or address-bound error must also remain visible in this RED run.
+Expected: malformed UTF-8/frequency/row tests fail or fail with the wrong diagnostic until strict validators are added. Any cache race, untrimmed tail, incorrect byte count, tag-boundary, maximum-length, or configured address-bound error introduced in this task must also remain visible in this RED run. Aggregate overflow, extreme-ratio weighting, root self-loop, and non-finite core payload behavior are already GREEN from Tasks 1 and 2 and are regression coverage in this command, not expected failures.
 
 - [ ] **Step 3: Add strict row/frequency/UTF-8 validation on the dictionary path**
 
-Tokenize with `std::istringstream` so repeated ASCII whitespace is accepted but missing or extra columns are rejected. Parse frequency with `std::strtod`, reset/check `errno`, require the end pointer to reach the token terminator, require `std::isfinite(value)`, and require `value > 0.0` before summing or taking a logarithm. For each main frequency, compute `next_sum = freq_sum + value` and reject unless `next_sum` is finite and positive; validate the final aggregate again before `std::log(freq_sum)`. Calculate main and explicit user weights only as `std::log(value) - std::log(freq_sum)`, reject any non-finite result, and never evaluate `value / freq_sum`.
+Tokenize with `std::istringstream` so repeated ASCII whitespace is accepted but missing or extra columns are rejected. Parse frequency with `std::strtod`, reset/check `errno`, require the end pointer to reach the token terminator, require `std::isfinite(value)`, and require `value > 0.0` before passing it to Task 2's already-checked aggregate and log-weight path. Do not duplicate or replace Task 2's `next_sum` and `calculate_log_weight` logic.
 
 Dictionary words require a strict UTF-8 validator before the existing Rune decoder. Accept ASCII; accept leading bytes `C2..DF`, `E0..EF`, and `F0..F4` only with the required continuation bytes; enforce `E0` second byte `A0..BF`, `ED` second byte `80..9F`, `F0` second byte `90..BF`, and `F4` second byte `80..8F`. Reject truncated sequences, stray continuations, overlong forms, surrogates, code points above U+10FFFF, and empty decoded words. Include file path and one-based line number in every construction diagnostic.
 
@@ -969,7 +974,7 @@ Reject a zero-row main file as `effective dictionary is empty`. After duplicate 
 
 - [ ] **Step 4: Audit every DAT address and trim invariant**
 
-Create the root directly at slot `0`, then route every child placement, sibling candidate, recursion, exact lookup, and prefix lookup through `CheckedTransitionAddress`, which rejects `address <= 0`. Never pass root creation through this helper and never resize from an unchecked address. On any placement failure, leave a useful error string and return false; `BuildDictionaryData` wraps it with `XCHECK` and the `DAT build failed` prefix. The root-self-loop regression must fail exact and prefix lookup for the prepended phantom Rune even though `check_[0] == 0` and `base_[0] < 0`.
+Audit and retain Task 1's invariant: create the root directly at slot `0`, then route every child placement, sibling candidate, recursion, exact lookup, and prefix lookup through `CheckedTransitionAddress`, which rejects `address <= 0`. Never pass root creation through this helper and never resize from an unchecked address. On any placement failure, leave a useful error string and return false; `BuildDictionaryData` wraps it with `XCHECK` and the `DAT build failed` prefix. The existing root-self-loop regression must continue returning false for exact lookup and no matches for prefix lookup even though `check_[0] == 0` and `base_[0] < 0`.
 
 After trimming, assert in debug builds that all five array sizes match and that either only the root exists or `check_.back() != -1`. Recompute stats only after trimming. Confirm the configured-limit test fails before allocation and that the normal sparse-code-point test still uses a negative root base.
 
