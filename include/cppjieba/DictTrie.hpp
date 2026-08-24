@@ -2,6 +2,7 @@
 #define CPPJIEBA_DICT_TRIE_HPP
 
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -424,8 +425,9 @@ class DictTrie {
                                        const std::string& path,
                                        size_t line_number) {
     char* parsed_end = NULL;
+    errno = 0;
     const double frequency = std::strtod(text.c_str(), &parsed_end);
-    XCHECK(!text.empty() &&
+    XCHECK(errno == 0 && !text.empty() &&
            parsed_end == text.c_str() + text.size() &&
            std::isfinite(frequency) && frequency > 0.0)
         << "frequency must be finite and greater than zero at "
