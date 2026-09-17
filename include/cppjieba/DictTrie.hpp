@@ -16,7 +16,7 @@
 #include "Utils.hpp"
 #include "UnicodeFile.hpp"
 #include "Unicode.hpp"
-#include "Trie.hpp"
+#include "BitmapTrie.hpp"
 
 namespace cppjieba {
 const size_t DICT_COLUMN_NUM = 3;
@@ -30,7 +30,7 @@ class DictTrie {
     WordWeightMax,
   }; // enum UserWordWeightOption
 
-  DictTrie(const std::string& dict_path, const std::string& user_dict_paths = "", UserWordWeightOption user_word_weight_opt = WordWeightMedian) {
+  DictTrie(const std::string& dict_path, const std::string& user_dict_paths = "", UserWordWeightOption user_word_weight_opt = WordWeightMedian) : trie_(NULL) {
     Init(dict_path, user_dict_paths, user_word_weight_opt);
   }
 
@@ -79,6 +79,14 @@ class DictTrie {
     trie_->Find(begin, end, res, max_word_len);
   }
 
+  void FindBestPath(RuneStrArray::const_iterator begin,
+                    RuneStrArray::const_iterator end,
+                    size_t max_word_len, std::vector<size_t>& lengths) const {
+    trie_->FindBestPath(begin, end, min_weight_, max_word_len, lengths);
+  }
+
+  const BitmapTrie& GetBitmapTrie() const { return *trie_; }
+
   bool Find(const std::string& word)
   {
     const DictUnit *tmp = NULL;
@@ -110,26 +118,27 @@ class DictTrie {
     std::vector<std::string> buf;
     DictUnit node_info;
     Split(line, buf, " ");
-    if(buf.size() == 1){
-          MakeNodeInfo(node_info,
-                buf[0],
-                user_word_default_weight_,
-                UNKNOWN_TAG);
-        } else if (buf.size() == 2) {
-          MakeNodeInfo(node_info,
-                buf[0],
-                user_word_default_weight_,
-                buf[1]);
-        } else if (buf.size() == 3) {
-          int freq = atoi(buf[1].c_str());
-          assert(freq_sum_ > 0.0);
-          double weight = log(1.0 * freq / freq_sum_);
-          MakeNodeInfo(node_info, buf[0], weight, buf[2]);
-        }
-        static_node_infos_.push_back(node_info);
-        if (node_info.word.size() == 1) {
-          user_dict_single_chinese_word_.insert(node_info.word[0]);
-        }
+    bool valid = false;
+    if (buf.size() == 1) {
+      valid = MakeNodeInfo(node_info, buf[0], user_word_default_weight_, UNKNOWN_TAG);
+    } else if (buf.size() == 2) {
+      valid = MakeNodeInfo(node_info, buf[0], user_word_default_weight_, buf[1]);
+    } else if (buf.size() == 3) {
+      const int freq = atoi(buf[1].c_str());
+      if (freq > 0) {
+        valid = MakeNodeInfo(node_info, buf[0], log(1.0 * freq / freq_sum_), buf[2]);
+      }
+    }
+    if (!valid || node_info.word.empty()) return;
+    if (node_info.word.size() == 1) {
+      user_dict_single_chinese_word_.insert(node_info.word[0]);
+    }
+    if (trie_) {
+      active_node_infos_.push_back(node_info);
+      trie_->InsertNode(node_info.word, &active_node_infos_.back());
+    } else {
+      static_node_infos_.push_back(node_info);
+    }
   }
 
   void LoadUserDict(const std::vector<std::string>& buf) {
@@ -215,7 +224,7 @@ class DictTrie {
       valuePointers.push_back(&static_node_infos_[i]);
     }
 
-    trie_ = new Trie(words, valuePointers);
+    trie_ = new BitmapTrie(words, valuePointers);
   }
 
   bool MakeNodeInfo(DictUnit& node_info,
@@ -250,15 +259,21 @@ class DictTrie {
     }
     XCHECK(!node_infos.empty()) << "dict file is empty: " << filePath;
 
+    node_infos.shrink_to_fit();
     entry.freq_sum = CalcFreqSum(node_infos);
     CalculateWeight(node_infos, entry.freq_sum);
-    std::vector<DictUnit> sorted = node_infos;
-    std::sort(sorted.begin(), sorted.end(), WeightCompare);
-    entry.min_weight = sorted.front().weight;
-    entry.max_weight = sorted.back().weight;
-    entry.median_weight = sorted[sorted.size() / 2].weight;
+    // Only the weights are needed for the default user-word statistics. Avoid
+    // copying every word and tag twice while the packed model is being built.
+    std::vector<double> sorted;
+    sorted.reserve(node_infos.size());
+    for (size_t i = 0; i < node_infos.size(); ++i) sorted.push_back(node_infos[i].weight);
+    std::sort(sorted.begin(), sorted.end());
+    entry.min_weight = sorted.front();
+    entry.max_weight = sorted.back();
+    entry.median_weight = sorted[sorted.size() / 2];
 
-    entry.node_infos = std::shared_ptr<const std::vector<DictUnit> >(new std::vector<DictUnit>(node_infos));
+    entry.node_infos = std::shared_ptr<const std::vector<DictUnit> >(
+        new std::vector<DictUnit>(std::move(node_infos)));
     return entry;
   }
 
@@ -274,10 +289,6 @@ class DictTrie {
     std::pair<std::unordered_map<std::string, DictCacheEntry>::iterator, bool> result =
       cache.insert(std::make_pair(filePath, entry));
     return result.first->second;
-  }
-
-  static bool WeightCompare(const DictUnit& lhs, const DictUnit& rhs) {
-    return lhs.weight < rhs.weight;
   }
 
   static double CalcFreqSum(const std::vector<DictUnit>& node_infos) {
@@ -304,7 +315,7 @@ class DictTrie {
   std::shared_ptr<const std::vector<DictUnit> > base_static_node_infos_;
   std::vector<DictUnit> static_node_infos_;
   std::deque<DictUnit> active_node_infos_; // must not be std::vector
-  Trie * trie_;
+  BitmapTrie * trie_;
 
   double freq_sum_;
   double min_weight_;

@@ -10,6 +10,8 @@ INCLUDE_DIRECTORIES(
 
 ADD_EXECUTABLE(load_test load_test.cpp)
 ADD_EXECUTABLE(benchmark_bin benchmark.cpp)
+ADD_EXECUTABLE(bitmap_differential EXCLUDE_FROM_ALL bitmap_differential.cpp)
+ADD_EXECUTABLE(bitmap_archive_check EXCLUDE_FROM_ALL bitmap_archive_check.cpp)
 if(WIN32)
     target_link_libraries(benchmark_bin Psapi)
 endif()

@@ -59,6 +59,10 @@ make benchmark
 
 这个 benchmark 主要用于本地修改前后的性能回归和对比，不作为默认测试的一部分。
 
+主词典使用 raw-Rune 位图 DAT，MP 分词使用环形 DP。`DATModel` 额外输出槽位数、
+紧凑模型大小及兼容接口所需的元数据索引大小；进程内存以 RSS 指标为准。
+详见[实现与验证说明](docs/bitmap-raw.md)及[性能对比](docs/benchmarks/2026-09-17-bitmap-raw.md)。
+
 ## 使用示例
 
 ```

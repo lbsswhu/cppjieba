@@ -167,3 +167,42 @@ TEST(DictTrieTest, Dag) {
     }
   }
 }
+
+TEST(DictTrieTest, ReusedDagReplacesCandidates) {
+  DictTrie trie(DICT_FILE);
+  RuneStrArray runes;
+  ASSERT_TRUE(DecodeUTF8RunesInString("清华大学", runes));
+  vector<Dag> reused;
+  trie.Find(runes.begin(), runes.end(), reused);
+  const size_t expected = reused[0].nexts.size();
+  trie.Find(runes.begin(), runes.end(), reused);
+  EXPECT_EQ(expected, reused[0].nexts.size());
+}
+
+TEST(DictTrieTest, DeleteMasksOnlyExactWordAndCanReinsert) {
+  DictTrie trie(DICT_FILE);
+  ASSERT_TRUE(trie.InsertUserWord("测试前缀", 100, "nz"));
+  ASSERT_TRUE(trie.InsertUserWord("测试前缀长词", 100, "nz"));
+  ASSERT_TRUE(trie.DeleteUserWord("测试前缀"));
+  EXPECT_FALSE(trie.Find("测试前缀"));
+  EXPECT_TRUE(trie.Find("测试前缀长词"));
+  ASSERT_TRUE(trie.InsertUserWord("测试前缀", 200, "n"));
+  EXPECT_TRUE(trie.Find("测试前缀"));
+  EXPECT_TRUE(trie.Find("测试前缀长词"));
+}
+
+TEST(DictTrieTest, RuntimeUserDictionaryKeepsExistingPointersValid) {
+  DictTrie trie(DICT_FILE, TEST_DATA_DIR "/userdict.utf8");
+  RuneStrArray runes;
+  ASSERT_TRUE(DecodeUTF8RunesInString("蓝翔", runes));
+  const DictUnit* before = trie.Find(runes.begin(), runes.end());
+  ASSERT_TRUE(before);
+  vector<string> lines;
+  for (size_t i = 0; i < 200; ++i) {
+    lines.push_back("新增词" + std::to_string(i) + " 100 nz");
+  }
+  trie.LoadUserDict(lines);
+  EXPECT_TRUE(trie.Find("新增词199"));
+  EXPECT_EQ("nz", before->tag);
+  EXPECT_EQ(before, trie.Find(runes.begin(), runes.end()));
+}

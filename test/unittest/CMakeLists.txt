@@ -29,7 +29,9 @@ INCLUDE_DIRECTORIES(
 ADD_EXECUTABLE(test.run 
     gtest_main.cpp 
     keyword_extractor_test.cpp 
-    trie_test.cpp 
+    trie_test.cpp
+    bitmap_dat_test.cpp
+    bitmap_trie_test.cpp
     segments_test.cpp 
     pos_tagger_test.cpp
     jieba_test.cpp

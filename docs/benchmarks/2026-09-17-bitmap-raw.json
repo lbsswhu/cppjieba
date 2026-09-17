@@ -1,0 +1,744 @@
+{
+  "utc": "2026-09-17T03:42:14.171826+00:00",
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+  "cpu": 0,
+  "rounds": 7,
+  "binaries": {
+    "baseline": "/home/lb/cppjieba/build/bitmap-baseline/benchmark_bin",
+    "optimized": "/home/lb/cppjieba/.worktrees/bitmap-raw/build/benchmark_bin"
+  },
+  "samples": [
+    {
+      "name": "baseline",
+      "round": 1,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 191.24,
+          "rss_mb": 125.414,
+          "rss_delta_mb": 119.734
+        },
+        "HMMModelLoad": {
+          "ms": 5.94,
+          "rss_mb": 125.539,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4229.94,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 47.282,
+          "mb_per_sec": 36.793
+        },
+        "MixCut": {
+          "ms": 5276.45,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 37.904,
+          "mb_per_sec": 29.495
+        },
+        "DictFind": {
+          "ms": 45.297,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 22076620.532
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=191.240 rss_mb=125.414 rss_delta_mb=119.734\nBENCH HMMModelLoad ms=5.940 rss_mb=125.539 rss_delta_mb=0.125\nBENCH MPCut ms=4229.940 iters=200 bytes=815952 output_words=179022 docs_per_sec=47.282 mb_per_sec=36.793\nBENCH MixCut ms=5276.450 iters=200 bytes=815952 output_words=165690 docs_per_sec=37.904 mb_per_sec=29.495\nBENCH DictFind ms=45.297 iters=20 queries=50000 hits=1000000 qps=22076620.532\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 1,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 678.276,
+          "rss_mb": 88.609,
+          "rss_delta_mb": 83.055
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 5.483,
+          "rss_mb": 88.734,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1586.68,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 126.049,
+          "mb_per_sec": 98.086
+        },
+        "MixCut": {
+          "ms": 2375.756,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 84.184,
+          "mb_per_sec": 65.508
+        },
+        "DictFind": {
+          "ms": 28.772,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 34756102.181
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=678.276 rss_mb=88.609 rss_delta_mb=83.055\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=5.483 rss_mb=88.734 rss_delta_mb=0.125\nBENCH MPCut ms=1586.680 iters=200 bytes=815952 output_words=179022 docs_per_sec=126.049 mb_per_sec=98.086\nBENCH MixCut ms=2375.756 iters=200 bytes=815952 output_words=165690 docs_per_sec=84.184 mb_per_sec=65.508\nBENCH DictFind ms=28.772 iters=20 queries=50000 hits=1000000 qps=34756102.181\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 2,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 679.172,
+          "rss_mb": 88.609,
+          "rss_delta_mb": 82.93
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 5.43,
+          "rss_mb": 88.734,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1611.507,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 124.107,
+          "mb_per_sec": 96.574
+        },
+        "MixCut": {
+          "ms": 2380.801,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 84.005,
+          "mb_per_sec": 65.369
+        },
+        "DictFind": {
+          "ms": 29.287,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 34145322.767
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=679.172 rss_mb=88.609 rss_delta_mb=82.930\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=5.430 rss_mb=88.734 rss_delta_mb=0.125\nBENCH MPCut ms=1611.507 iters=200 bytes=815952 output_words=179022 docs_per_sec=124.107 mb_per_sec=96.574\nBENCH MixCut ms=2380.801 iters=200 bytes=815952 output_words=165690 docs_per_sec=84.005 mb_per_sec=65.369\nBENCH DictFind ms=29.287 iters=20 queries=50000 hits=1000000 qps=34145322.767\n",
+      "stderr": ""
+    },
+    {
+      "name": "baseline",
+      "round": 2,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 183.646,
+          "rss_mb": 125.418,
+          "rss_delta_mb": 119.734
+        },
+        "HMMModelLoad": {
+          "ms": 5.715,
+          "rss_mb": 125.543,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4148.044,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 48.215,
+          "mb_per_sec": 37.519
+        },
+        "MixCut": {
+          "ms": 5238.656,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 38.178,
+          "mb_per_sec": 29.708
+        },
+        "DictFind": {
+          "ms": 44.353,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 22546491.373
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=183.646 rss_mb=125.418 rss_delta_mb=119.734\nBENCH HMMModelLoad ms=5.715 rss_mb=125.543 rss_delta_mb=0.125\nBENCH MPCut ms=4148.044 iters=200 bytes=815952 output_words=179022 docs_per_sec=48.215 mb_per_sec=37.519\nBENCH MixCut ms=5238.656 iters=200 bytes=815952 output_words=165690 docs_per_sec=38.178 mb_per_sec=29.708\nBENCH DictFind ms=44.353 iters=20 queries=50000 hits=1000000 qps=22546491.373\n",
+      "stderr": ""
+    },
+    {
+      "name": "baseline",
+      "round": 3,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 185.488,
+          "rss_mb": 125.418,
+          "rss_delta_mb": 119.863
+        },
+        "HMMModelLoad": {
+          "ms": 5.783,
+          "rss_mb": 125.543,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4258.76,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 46.962,
+          "mb_per_sec": 36.544
+        },
+        "MixCut": {
+          "ms": 5308.777,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 37.673,
+          "mb_per_sec": 29.316
+        },
+        "DictFind": {
+          "ms": 47.447,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 21076213.421
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=185.488 rss_mb=125.418 rss_delta_mb=119.863\nBENCH HMMModelLoad ms=5.783 rss_mb=125.543 rss_delta_mb=0.125\nBENCH MPCut ms=4258.760 iters=200 bytes=815952 output_words=179022 docs_per_sec=46.962 mb_per_sec=36.544\nBENCH MixCut ms=5308.777 iters=200 bytes=815952 output_words=165690 docs_per_sec=37.673 mb_per_sec=29.316\nBENCH DictFind ms=47.447 iters=20 queries=50000 hits=1000000 qps=21076213.421\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 3,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 682.851,
+          "rss_mb": 88.738,
+          "rss_delta_mb": 83.059
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 5.739,
+          "rss_mb": 88.863,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1600.635,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 124.95,
+          "mb_per_sec": 97.23
+        },
+        "MixCut": {
+          "ms": 2394.319,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 83.531,
+          "mb_per_sec": 65.0
+        },
+        "DictFind": {
+          "ms": 30.167,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 33149317.054
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=682.851 rss_mb=88.738 rss_delta_mb=83.059\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=5.739 rss_mb=88.863 rss_delta_mb=0.125\nBENCH MPCut ms=1600.635 iters=200 bytes=815952 output_words=179022 docs_per_sec=124.950 mb_per_sec=97.230\nBENCH MixCut ms=2394.319 iters=200 bytes=815952 output_words=165690 docs_per_sec=83.531 mb_per_sec=65.000\nBENCH DictFind ms=30.167 iters=20 queries=50000 hits=1000000 qps=33149317.054\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 4,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 686.016,
+          "rss_mb": 88.738,
+          "rss_delta_mb": 83.059
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 5.69,
+          "rss_mb": 88.863,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1606.697,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 124.479,
+          "mb_per_sec": 96.864
+        },
+        "MixCut": {
+          "ms": 2409.584,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 83.002,
+          "mb_per_sec": 64.588
+        },
+        "DictFind": {
+          "ms": 28.055,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 35643671.782
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=686.016 rss_mb=88.738 rss_delta_mb=83.059\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=5.690 rss_mb=88.863 rss_delta_mb=0.125\nBENCH MPCut ms=1606.697 iters=200 bytes=815952 output_words=179022 docs_per_sec=124.479 mb_per_sec=96.864\nBENCH MixCut ms=2409.584 iters=200 bytes=815952 output_words=165690 docs_per_sec=83.002 mb_per_sec=64.588\nBENCH DictFind ms=28.055 iters=20 queries=50000 hits=1000000 qps=35643671.782\n",
+      "stderr": ""
+    },
+    {
+      "name": "baseline",
+      "round": 4,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 186.33,
+          "rss_mb": 125.418,
+          "rss_delta_mb": 119.734
+        },
+        "HMMModelLoad": {
+          "ms": 5.946,
+          "rss_mb": 125.543,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4277.526,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 46.756,
+          "mb_per_sec": 36.383
+        },
+        "MixCut": {
+          "ms": 5333.759,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 37.497,
+          "mb_per_sec": 29.178
+        },
+        "DictFind": {
+          "ms": 53.227,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 18787625.155
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=186.330 rss_mb=125.418 rss_delta_mb=119.734\nBENCH HMMModelLoad ms=5.946 rss_mb=125.543 rss_delta_mb=0.125\nBENCH MPCut ms=4277.526 iters=200 bytes=815952 output_words=179022 docs_per_sec=46.756 mb_per_sec=36.383\nBENCH MixCut ms=5333.759 iters=200 bytes=815952 output_words=165690 docs_per_sec=37.497 mb_per_sec=29.178\nBENCH DictFind ms=53.227 iters=20 queries=50000 hits=1000000 qps=18787625.155\n",
+      "stderr": ""
+    },
+    {
+      "name": "baseline",
+      "round": 5,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 189.674,
+          "rss_mb": 125.418,
+          "rss_delta_mb": 119.734
+        },
+        "HMMModelLoad": {
+          "ms": 5.901,
+          "rss_mb": 125.543,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4301.677,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 46.493,
+          "mb_per_sec": 36.179
+        },
+        "MixCut": {
+          "ms": 5258.648,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 38.033,
+          "mb_per_sec": 29.595
+        },
+        "DictFind": {
+          "ms": 43.719,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 22873346.597
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=189.674 rss_mb=125.418 rss_delta_mb=119.734\nBENCH HMMModelLoad ms=5.901 rss_mb=125.543 rss_delta_mb=0.125\nBENCH MPCut ms=4301.677 iters=200 bytes=815952 output_words=179022 docs_per_sec=46.493 mb_per_sec=36.179\nBENCH MixCut ms=5258.648 iters=200 bytes=815952 output_words=165690 docs_per_sec=38.033 mb_per_sec=29.595\nBENCH DictFind ms=43.719 iters=20 queries=50000 hits=1000000 qps=22873346.597\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 5,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 692.432,
+          "rss_mb": 88.738,
+          "rss_delta_mb": 83.055
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 6.534,
+          "rss_mb": 88.863,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1658.809,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 120.568,
+          "mb_per_sec": 93.821
+        },
+        "MixCut": {
+          "ms": 2434.142,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 82.164,
+          "mb_per_sec": 63.936
+        },
+        "DictFind": {
+          "ms": 29.988,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 33346476.291
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=692.432 rss_mb=88.738 rss_delta_mb=83.055\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=6.534 rss_mb=88.863 rss_delta_mb=0.125\nBENCH MPCut ms=1658.809 iters=200 bytes=815952 output_words=179022 docs_per_sec=120.568 mb_per_sec=93.821\nBENCH MixCut ms=2434.142 iters=200 bytes=815952 output_words=165690 docs_per_sec=82.164 mb_per_sec=63.936\nBENCH DictFind ms=29.988 iters=20 queries=50000 hits=1000000 qps=33346476.291\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 6,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 686.059,
+          "rss_mb": 88.609,
+          "rss_delta_mb": 82.93
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 5.453,
+          "rss_mb": 88.734,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1606.629,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 124.484,
+          "mb_per_sec": 96.868
+        },
+        "MixCut": {
+          "ms": 2417.031,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 82.746,
+          "mb_per_sec": 64.389
+        },
+        "DictFind": {
+          "ms": 29.917,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 33425285.179
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=686.059 rss_mb=88.609 rss_delta_mb=82.930\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=5.453 rss_mb=88.734 rss_delta_mb=0.125\nBENCH MPCut ms=1606.629 iters=200 bytes=815952 output_words=179022 docs_per_sec=124.484 mb_per_sec=96.868\nBENCH MixCut ms=2417.031 iters=200 bytes=815952 output_words=165690 docs_per_sec=82.746 mb_per_sec=64.389\nBENCH DictFind ms=29.917 iters=20 queries=50000 hits=1000000 qps=33425285.179\n",
+      "stderr": ""
+    },
+    {
+      "name": "baseline",
+      "round": 6,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 190.674,
+          "rss_mb": 125.418,
+          "rss_delta_mb": 119.734
+        },
+        "HMMModelLoad": {
+          "ms": 5.872,
+          "rss_mb": 125.543,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4421.103,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 45.238,
+          "mb_per_sec": 35.202
+        },
+        "MixCut": {
+          "ms": 5346.917,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 37.405,
+          "mb_per_sec": 29.107
+        },
+        "DictFind": {
+          "ms": 43.894,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 22782287.291
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=190.674 rss_mb=125.418 rss_delta_mb=119.734\nBENCH HMMModelLoad ms=5.872 rss_mb=125.543 rss_delta_mb=0.125\nBENCH MPCut ms=4421.103 iters=200 bytes=815952 output_words=179022 docs_per_sec=45.238 mb_per_sec=35.202\nBENCH MixCut ms=5346.917 iters=200 bytes=815952 output_words=165690 docs_per_sec=37.405 mb_per_sec=29.107\nBENCH DictFind ms=43.894 iters=20 queries=50000 hits=1000000 qps=22782287.291\n",
+      "stderr": ""
+    },
+    {
+      "name": "baseline",
+      "round": 7,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 188.785,
+          "rss_mb": 125.414,
+          "rss_delta_mb": 119.734
+        },
+        "HMMModelLoad": {
+          "ms": 5.822,
+          "rss_mb": 125.539,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 4371.11,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 45.755,
+          "mb_per_sec": 35.604
+        },
+        "MixCut": {
+          "ms": 5314.108,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 37.636,
+          "mb_per_sec": 29.286
+        },
+        "DictFind": {
+          "ms": 46.349,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 21575464.123
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=188.785 rss_mb=125.414 rss_delta_mb=119.734\nBENCH HMMModelLoad ms=5.822 rss_mb=125.539 rss_delta_mb=0.125\nBENCH MPCut ms=4371.110 iters=200 bytes=815952 output_words=179022 docs_per_sec=45.755 mb_per_sec=35.604\nBENCH MixCut ms=5314.108 iters=200 bytes=815952 output_words=165690 docs_per_sec=37.636 mb_per_sec=29.286\nBENCH DictFind ms=46.349 iters=20 queries=50000 hits=1000000 qps=21575464.123\n",
+      "stderr": ""
+    },
+    {
+      "name": "optimized",
+      "round": 7,
+      "metrics": {
+        "DictTrieLoad": {
+          "ms": 681.998,
+          "rss_mb": 88.738,
+          "rss_delta_mb": 83.055
+        },
+        "DATModel": {
+          "packed": 1.0,
+          "nodes": 497995.0,
+          "slots": 802401.0,
+          "unit_bytes": 6419208.0,
+          "model_bytes": 6459912.0,
+          "metadata_index_bytes": 6001484.0,
+          "unique_weights": 5087.0
+        },
+        "HMMModelLoad": {
+          "ms": 5.324,
+          "rss_mb": 88.863,
+          "rss_delta_mb": 0.125
+        },
+        "MPCut": {
+          "ms": 1593.031,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 179022.0,
+          "docs_per_sec": 125.547,
+          "mb_per_sec": 97.695
+        },
+        "MixCut": {
+          "ms": 2398.635,
+          "iters": 200.0,
+          "bytes": 815952.0,
+          "output_words": 165690.0,
+          "docs_per_sec": 83.381,
+          "mb_per_sec": 64.883
+        },
+        "DictFind": {
+          "ms": 28.452,
+          "iters": 20.0,
+          "queries": 50000.0,
+          "hits": 1000000.0,
+          "qps": 35147448.996
+        }
+      },
+      "stdout": "BENCH DictTrieLoad ms=681.998 rss_mb=88.738 rss_delta_mb=83.055\nBENCH DATModel packed=1 nodes=497995 slots=802401 unit_bytes=6419208 model_bytes=6459912 metadata_index_bytes=6001484 unique_weights=5087\nBENCH HMMModelLoad ms=5.324 rss_mb=88.863 rss_delta_mb=0.125\nBENCH MPCut ms=1593.031 iters=200 bytes=815952 output_words=179022 docs_per_sec=125.547 mb_per_sec=97.695\nBENCH MixCut ms=2398.635 iters=200 bytes=815952 output_words=165690 docs_per_sec=83.381 mb_per_sec=64.883\nBENCH DictFind ms=28.452 iters=20 queries=50000 hits=1000000 qps=35147448.996\n",
+      "stderr": ""
+    }
+  ],
+  "medians": {
+    "baseline": {
+      "DictTrieLoad": {
+        "ms": 188.785,
+        "rss_mb": 125.418,
+        "rss_delta_mb": 119.734
+      },
+      "HMMModelLoad": {
+        "ms": 5.872,
+        "rss_mb": 125.543,
+        "rss_delta_mb": 0.125
+      },
+      "MPCut": {
+        "ms": 4277.526,
+        "iters": 200.0,
+        "bytes": 815952.0,
+        "output_words": 179022.0,
+        "docs_per_sec": 46.756,
+        "mb_per_sec": 36.383
+      },
+      "MixCut": {
+        "ms": 5308.777,
+        "iters": 200.0,
+        "bytes": 815952.0,
+        "output_words": 165690.0,
+        "docs_per_sec": 37.673,
+        "mb_per_sec": 29.316
+      },
+      "DictFind": {
+        "ms": 45.297,
+        "iters": 20.0,
+        "queries": 50000.0,
+        "hits": 1000000.0,
+        "qps": 22076620.532
+      }
+    },
+    "optimized": {
+      "DictTrieLoad": {
+        "ms": 682.851,
+        "rss_mb": 88.738,
+        "rss_delta_mb": 83.055
+      },
+      "DATModel": {
+        "packed": 1.0,
+        "nodes": 497995.0,
+        "slots": 802401.0,
+        "unit_bytes": 6419208.0,
+        "model_bytes": 6459912.0,
+        "metadata_index_bytes": 6001484.0,
+        "unique_weights": 5087.0
+      },
+      "HMMModelLoad": {
+        "ms": 5.483,
+        "rss_mb": 88.863,
+        "rss_delta_mb": 0.125
+      },
+      "MPCut": {
+        "ms": 1606.629,
+        "iters": 200.0,
+        "bytes": 815952.0,
+        "output_words": 179022.0,
+        "docs_per_sec": 124.484,
+        "mb_per_sec": 96.868
+      },
+      "MixCut": {
+        "ms": 2398.635,
+        "iters": 200.0,
+        "bytes": 815952.0,
+        "output_words": 165690.0,
+        "docs_per_sec": 83.381,
+        "mb_per_sec": 64.883
+      },
+      "DictFind": {
+        "ms": 29.287,
+        "iters": 20.0,
+        "queries": 50000.0,
+        "hits": 1000000.0,
+        "qps": 34145322.767
+      }
+    }
+  },
+  "baseline_commit": "103e1a2c9f06d80705d261ab1cd66bc48c090abd",
+  "compiler": "c++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+  "flags": "-O3 -DNDEBUG -O3 -g -std=c++11",
+  "cpu_model": "13th Gen Intel(R) Core(TM) i7-13700 (WSL2 guest)",
+  "input_sha256": {
+    "dict/jieba.dict.utf8": "6f7d4350e8861ef4139b2e3a6fad05430c19ae71f4b8378190edecac8aae2e6a",
+    "dict/user.dict.utf8": "24e5caba06a8a0bf707b00ff6e1c78afa4d878517dc2cf8b7a88707b980512d3",
+    "dict/hmm_model.utf8": "f17790586ac86dd048c8adffed052c4bd2b28ed0682972c1275e59040c0589a7",
+    "test/testdata/synthetic_doc.utf8": "fe72dd38c2f2414b98ba0df4995cc1c2055f38f962f6c92e5bc4e5c2b24eabf3"
+  },
+  "binary_sha256": {
+    "baseline": "e1e0737d8491d23d7e8e0789dc99268653673730c9ebbbabc63832bc100335ba",
+    "optimized": "91f03565f2138b0340400ed4bd4e069422bb5d0c847991922a5535cf365c0a0c"
+  }
+}

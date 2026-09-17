@@ -170,6 +170,15 @@ int main(int argc, char** argv) {
   });
   double rss_after_dict = GetCurrentRSSInMB();
   PrintMetric("DictTrieLoad", dict_load_ms, FormatRSSDetails(rss_before, rss_after_dict));
+  const BitmapTrie& bitmap = dict_trie->GetBitmapTrie();
+  const BitmapDoubleArrayTrie& dat = bitmap.GetDAT();
+  std::cout << "BENCH DATModel packed=" << bitmap.UsesPackedDAT()
+            << " nodes=" << dat.NodeCount() << " slots=" << dat.SlotCount()
+            << " unit_bytes=" << dat.SlotCount() * sizeof(uint64_t)
+            << " model_bytes=" << (bitmap.UsesPackedDAT() ? dat.ModelBytes() + sizeof(double) : 0)
+            << " metadata_index_bytes=" << bitmap.MetadataBytes()
+            << " unique_weights=" << dat.Weights().size() << std::endl;
+
 
   HMMModel* hmm_model = NULL;
   const double hmm_load_ms = MeasureMillis([&hmm_model, &model_path]() {
