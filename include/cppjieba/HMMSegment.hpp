@@ -6,6 +6,7 @@
 #include <memory.h>
 #include <cassert>
 #include "HMMModel.hpp"
+#include "HmmScratch.hpp"
 #include "SegmentBase.hpp"
 
 namespace cppjieba {
@@ -34,22 +35,29 @@ class HMMSegment: public SegmentBase {
     PreFilter pre_filter(symbols_, sentence);
     PreFilter::Range range;
     vector<WordRange> wrs;
+    HmmScratch scratch;
     wrs.reserve(sentence.size()/2);
     while (pre_filter.HasNext()) {
       range = pre_filter.Next();
-      Cut(range.begin, range.end, wrs);
+      CutWithScratch(range.begin, range.end, wrs, scratch);
     }
     words.clear();
     words.reserve(wrs.size());
     GetWordsFromWordRanges(sentence, wrs, words);
   }
   void Cut(RuneStrArray::const_iterator begin, RuneStrArray::const_iterator end, vector<WordRange>& res) const {
+    HmmScratch scratch;
+    CutWithScratch(begin, end, res, scratch);
+  }
+  void CutWithScratch(RuneStrArray::const_iterator begin,
+                      RuneStrArray::const_iterator end,
+                      vector<WordRange>& res, HmmScratch& scratch) const {
     RuneStrArray::const_iterator left = begin;
     RuneStrArray::const_iterator right = begin;
     while (right != end) {
       if (right->rune < 0x80) {
         if (left != right) {
-          InternalCut(left, right, res);
+          InternalCut(left, right, res, scratch);
         }
         left = right;
         do {
@@ -71,7 +79,7 @@ class HMMSegment: public SegmentBase {
       }
     }
     if (left != right) {
-      InternalCut(left, right, res);
+      InternalCut(left, right, res, scratch);
     }
   }
  private:
@@ -132,10 +140,21 @@ class HMMSegment: public SegmentBase {
     }
     return begin;
   }
-  void InternalCut(RuneStrArray::const_iterator begin, RuneStrArray::const_iterator end, vector<WordRange>& res) const {
+  void InternalCut(RuneStrArray::const_iterator begin, RuneStrArray::const_iterator end,
+                   vector<WordRange>& res, HmmScratch& scratch) const {
+    if (model_->IsOptimizationEnabled()) {
+      ViterbiRolling(begin, end, scratch);
+      AppendWords(begin, scratch.status, res);
+      return;
+    }
     vector<size_t> status;
     Viterbi(begin, end, status);
+    AppendWords(begin, status, res);
+  }
 
+  template <typename States>
+  void AppendWords(RuneStrArray::const_iterator begin, const States& status,
+                   vector<WordRange>& res) const {
     RuneStrArray::const_iterator left = begin;
     RuneStrArray::const_iterator right;
     for (size_t i = 0; i < status.size(); i++) {
@@ -145,6 +164,44 @@ class HMMSegment: public SegmentBase {
         res.push_back(wr);
         left = right;
       }
+    }
+  }
+
+  void ViterbiRolling(RuneStrArray::const_iterator begin,
+                      RuneStrArray::const_iterator end,
+                      HmmScratch& scratch) const {
+    const size_t count = end - begin;
+    scratch.Prepare(count);
+    if (!count) return;
+    double emissions[HMMModel::STATUS_SUM];
+    model_->GetEmitProbs(begin->rune, emissions);
+    for (size_t y = 0; y < HMMModel::STATUS_SUM; ++y) {
+      scratch.prev[y] = model_->startProb[y] + emissions[y];
+      scratch.path[y] = 0xff;
+    }
+    for (size_t x = 1; x < count; ++x) {
+      model_->GetEmitProbs((begin + x)->rune, emissions);
+      for (size_t y = 0; y < HMMModel::STATUS_SUM; ++y) {
+        scratch.cur[y] = MIN_DOUBLE;
+        uint8_t& predecessor = scratch.path[x * HMMModel::STATUS_SUM + y];
+        predecessor = HMMModel::E;
+        for (size_t previous = 0; previous < HMMModel::STATUS_SUM; ++previous) {
+          const double score = (scratch.prev[previous] + model_->transProb[previous][y])
+              + emissions[y];
+          if (score > scratch.cur[y]) {
+            scratch.cur[y] = score;
+            predecessor = static_cast<uint8_t>(previous);
+          }
+        }
+      }
+      for (size_t y = 0; y < HMMModel::STATUS_SUM; ++y)
+        scratch.prev[y] = scratch.cur[y];
+    }
+    uint8_t state = scratch.prev[HMMModel::E] >= scratch.prev[HMMModel::S]
+        ? HMMModel::E : HMMModel::S;
+    for (size_t x = count; x-- > 0;) {
+      scratch.status[x] = state;
+      if (x) state = scratch.path[x * HMMModel::STATUS_SUM + state];
     }
   }
 

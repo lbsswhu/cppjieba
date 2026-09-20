@@ -27,6 +27,9 @@ INCLUDE_DIRECTORIES(
 )
 
 ADD_EXECUTABLE(test.run 
+    fused_cpu_test.cpp
+    dat_cpu_test.cpp
+    hmm_cpu_test.cpp
     gtest_main.cpp 
     keyword_extractor_test.cpp 
     trie_test.cpp 
@@ -39,4 +42,4 @@ ADD_EXECUTABLE(test.run
     unicode_path_test.cpp
 )
 
-TARGET_LINK_LIBRARIES(test.run gtest)
+TARGET_LINK_LIBRARIES(test.run gtest cppjieba)

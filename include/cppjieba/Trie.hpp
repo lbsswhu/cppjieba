@@ -45,11 +45,18 @@ class TrieNode {
  public:
   typedef unordered_map<TrieKey, TrieNode*> NextMap;
   NextMap *next;
-  const DictUnit *ptValue;
+  union {
+    const DictUnit *ptValue;
+    // Payload is no longer needed during destruction. Reuse its storage for
+    // an allocation-free work list, so long user words cannot exhaust the stack.
+    TrieNode *destruction_next;
+  };
 };
 
 class Trie {
  public:
+  Trie(const Trie&) = delete;
+  Trie& operator=(const Trie&) = delete;
   Trie(const vector<Unicode>& keys, const vector<const DictUnit*>& valuePointers)
    : root_(new TrieNode) {
     CreateTrie(keys, valuePointers);
@@ -181,18 +188,24 @@ class Trie {
   }
 
   void DeleteNode(TrieNode* node) {
-    if (NULL == node) {
-      return;
-    }
-    if (NULL != node->next) {
-      for (TrieNode::NextMap::iterator it = node->next->begin(); it != node->next->end(); ++it) {
-        DeleteNode(it->second);
+    if (!node) return;
+    node->destruction_next = NULL;
+    while (node) {
+      TrieNode* pending = node->destruction_next;
+      if (node->next) {
+        for (TrieNode::NextMap::iterator it = node->next->begin();
+             it != node->next->end(); ++it) {
+          it->second->destruction_next = pending;
+          pending = it->second;
+        }
+        delete node->next;
       }
-      delete node->next;
+      delete node;
+      node = pending;
     }
-    delete node;
   }
 
+  friend class PointerWalker;
   TrieNode* root_;
 }; // class Trie
 } // namespace cppjieba

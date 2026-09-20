@@ -8,13 +8,15 @@
 #include "DictTrie.hpp"
 #include "SegmentTagged.hpp"
 #include "PosTagger.hpp"
+#include "FusedMPCut.hpp"
 
 namespace cppjieba {
 
 class MPSegment: public SegmentTagged {
  public:
-  MPSegment(const string& dictPath, const string& userDictPath = "")
-    : dictTrie_(new DictTrie(dictPath, userDictPath)), isNeedDestroy_(true) {
+  MPSegment(const string& dictPath, const string& userDictPath = "",
+            const CpuCutOptions& options = CpuCutOptions())
+    : dictTrie_(new DictTrie(dictPath, userDictPath, DictTrie::WordWeightMedian, options)), isNeedDestroy_(true) {
   }
   MPSegment(const DictTrie* dictTrie)
     : dictTrie_(dictTrie), isNeedDestroy_(false) {
@@ -44,9 +46,10 @@ class MPSegment: public SegmentTagged {
     PreFilter::Range range;
     vector<WordRange> wrs;
     wrs.reserve(sentence.size()/2);
+    MPCutScratch scratch;
     while (pre_filter.HasNext()) {
       range = pre_filter.Next();
-      Cut(range.begin, range.end, wrs, max_word_len);
+      CutWithScratch(range.begin, range.end, wrs, scratch, max_word_len);
     }
     words.clear();
     words.reserve(wrs.size());
@@ -56,6 +59,41 @@ class MPSegment: public SegmentTagged {
            RuneStrArray::const_iterator end,
            vector<WordRange>& words,
            size_t max_word_len = MAX_WORD_LENGTH) const {
+    MPCutScratch scratch;
+    CutWithScratch(begin, end, words, scratch, max_word_len);
+  }
+
+  void CutWithScratch(RuneStrArray::const_iterator begin,
+                      RuneStrArray::const_iterator end,
+                      vector<WordRange>& words, MPCutScratch& scratch,
+                      size_t max_word_len = MAX_WORD_LENGTH) const {
+    assert(end >= begin);
+    const size_t n = static_cast<size_t>(end - begin);
+    if (!n) return;
+    const CpuCutMode mode = dictTrie_->GetCpuCutMode();
+    const size_t limit = std::max(size_t(1), std::min(n,
+        std::min(dictTrie_->GetActualMaxWordLen(), max_word_len)));
+    if (mode == CpuCutMode::LegacyDag || limit > UINT16_MAX) {
+#ifdef CPPJIEBA_CPU_DIAGNOSTICS
+      ++scratch.legacy_ranges;
+#endif
+      CutRangeLegacy(begin, end, words, max_word_len);
+      return;
+    }
+    if (mode == CpuCutMode::PointerFused) {
+      PointerWalker walker(dictTrie_->GetTrie(), begin);
+      CutRangeFused(begin, n, limit, dictTrie_->GetMinWeight(), walker, scratch, words);
+    } else {
+      const DatModel& model = *dictTrie_->GetDatModel();
+      RawDatWalker walker(model, begin);
+      CutRangeFused(begin, n, limit, model.UnknownWeight(), walker, scratch, words);
+    }
+  }
+
+ private:
+  void CutRangeLegacy(RuneStrArray::const_iterator begin,
+                      RuneStrArray::const_iterator end,
+                      vector<WordRange>& words, size_t max_word_len) const {
     vector<Dag> dags;
     dictTrie_->Find(begin, 
           end, 
@@ -65,6 +103,7 @@ class MPSegment: public SegmentTagged {
     CutByDag(begin, end, dags, words);
   }
 
+ public:
   const DictTrie* GetDictTrie() const {
     return dictTrie_;
   }

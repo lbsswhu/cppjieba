@@ -12,9 +12,12 @@ class Jieba {
         const string& model_path = "",
         const string& user_dict_path = "", 
         const string& idf_path = "", 
-        const string& stop_word_path = "") 
-    : dict_trie_(getPath(dict_path, "jieba.dict.utf8"), getPath(user_dict_path, "user.dict.utf8")),
-      model_(getPath(model_path, "hmm_model.utf8")),
+        const string& stop_word_path = "",
+        const CpuCutOptions& options = CpuCutOptions())
+    : dict_trie_(getPath(dict_path, "jieba.dict.utf8"), getPath(user_dict_path, "user.dict.utf8"),
+          DictTrie::WordWeightMedian, options),
+      model_(getPath(model_path, "hmm_model.utf8"),
+          options.optimize_hmm, options.hmm_dense_budget_bytes),
       mp_seg_(&dict_trie_),
       hmm_seg_(&model_),
       mix_seg_(&dict_trie_, &model_),

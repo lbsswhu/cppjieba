@@ -2,6 +2,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "msvc",
+    values = {"compiler": "msvc-cl"},
+)
+
 filegroup(
     name = "dict",
     srcs = glob(["dict/**"]),
@@ -9,6 +14,11 @@ filegroup(
 
 cc_library(
     name = "cppjieba",
+    srcs = ["src/DatBuilder.cpp"],
+    copts = select({
+        ":msvc": ["/fp:strict", "/utf-8"],
+        "//conditions:default": ["-fno-fast-math", "-ffp-contract=off"],
+    }),
     hdrs = glob(["include/cppjieba/**/*.hpp"]),
     includes = ["include"],
 )

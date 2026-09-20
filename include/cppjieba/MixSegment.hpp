@@ -33,9 +33,11 @@ class MixSegment: public SegmentTagged {
     PreFilter::Range range;
     vector<WordRange> wrs;
     wrs.reserve(sentence.size() / 2);
+    MPCutScratch mpScratch;
+    HmmScratch hmmScratch;
     while (pre_filter.HasNext()) {
       range = pre_filter.Next();
-      Cut(range.begin, range.end, wrs, hmm);
+      CutWithScratch(range.begin, range.end, wrs, hmm, mpScratch, hmmScratch);
     }
     words.clear();
     words.reserve(wrs.size());
@@ -43,14 +45,22 @@ class MixSegment: public SegmentTagged {
   }
 
   void Cut(RuneStrArray::const_iterator begin, RuneStrArray::const_iterator end, vector<WordRange>& res, bool hmm) const {
+    MPCutScratch mpScratch;
+    HmmScratch hmmScratch;
+    CutWithScratch(begin, end, res, hmm, mpScratch, hmmScratch);
+  }
+
+  void CutWithScratch(RuneStrArray::const_iterator begin,
+                      RuneStrArray::const_iterator end, vector<WordRange>& res,
+                      bool hmm, MPCutScratch& mpScratch, HmmScratch& hmmScratch) const {
     if (!hmm) {
-      mpSeg_.Cut(begin, end, res);
+      mpSeg_.CutWithScratch(begin, end, res, mpScratch);
       return;
     }
     vector<WordRange> words;
     assert(end >= begin);
     words.reserve(end - begin);
-    mpSeg_.Cut(begin, end, words);
+    mpSeg_.CutWithScratch(begin, end, words, mpScratch);
 
     vector<WordRange> hmmRes;
     hmmRes.reserve(end - begin);
@@ -70,7 +80,7 @@ class MixSegment: public SegmentTagged {
       // Cut the sequence with hmm
       assert(j - 1 >= i);
       // TODO
-      hmmSeg_.Cut(words[i].left, words[j - 1].left + 1, hmmRes);
+      hmmSeg_.CutWithScratch(words[i].left, words[j - 1].left + 1, hmmRes, hmmScratch);
       //put hmm result to result
       for (size_t k = 0; k < hmmRes.size(); k++) {
         res.push_back(hmmRes[k]);

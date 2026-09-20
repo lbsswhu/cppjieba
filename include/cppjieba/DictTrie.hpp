@@ -6,6 +6,8 @@
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include <chrono>
+#include <stdexcept>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -17,6 +19,7 @@
 #include "UnicodeFile.hpp"
 #include "Unicode.hpp"
 #include "Trie.hpp"
+#include "CpuCutOptions.hpp"
 
 namespace cppjieba {
 const size_t DICT_COLUMN_NUM = 3;
@@ -30,8 +33,15 @@ class DictTrie {
     WordWeightMax,
   }; // enum UserWordWeightOption
 
-  DictTrie(const std::string& dict_path, const std::string& user_dict_paths = "", UserWordWeightOption user_word_weight_opt = WordWeightMedian) {
+  DictTrie(const std::string& dict_path, const std::string& user_dict_paths = "", UserWordWeightOption user_word_weight_opt = WordWeightMedian,
+           const CpuCutOptions& options = CpuCutOptions())
+      : trie_(NULL), options_(options), initialized_(false), actual_max_word_len_(0),
+        load_ms_(0.0) {
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     Init(dict_path, user_dict_paths, user_word_weight_opt);
+    load_ms_ = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - start).count() - dat_stats_.build_ms;
+    initialized_ = true;
   }
 
   ~DictTrie() {
@@ -39,6 +49,7 @@ class DictTrie {
   }
 
   bool InsertUserWord(const std::string& word, const std::string& tag = UNKNOWN_TAG) {
+    if (IsDictionaryFrozen()) return false;
     DictUnit node_info;
     if (!MakeNodeInfo(node_info, word, user_word_default_weight_, tag)) {
       return false;
@@ -49,6 +60,7 @@ class DictTrie {
   }
 
   bool InsertUserWord(const std::string& word,int freq, const std::string& tag = UNKNOWN_TAG) {
+    if (IsDictionaryFrozen()) return false;
     DictUnit node_info;
     double weight = freq ? log(1.0 * freq / freq_sum_) : user_word_default_weight_ ;
     if (!MakeNodeInfo(node_info, word, weight , tag)) {
@@ -60,6 +72,7 @@ class DictTrie {
   }
 
   bool DeleteUserWord(const std::string& word, const std::string& tag = UNKNOWN_TAG) {
+    if (IsDictionaryFrozen()) return false;
     DictUnit node_info;
     if (!MakeNodeInfo(node_info, word, user_word_default_weight_, tag)) {
       return false;
@@ -107,6 +120,7 @@ class DictTrie {
   }
 
   void InserUserDictNode(const std::string& line) {
+    CheckMutable();
     std::vector<std::string> buf;
     DictUnit node_info;
     Split(line, buf, " ");
@@ -133,12 +147,14 @@ class DictTrie {
   }
 
   void LoadUserDict(const std::vector<std::string>& buf) {
+    CheckMutable();
     for (size_t i = 0; i < buf.size(); i++) {
       InserUserDictNode(buf[i]);
     }
   }
 
    void LoadUserDict(const std::set<std::string>& buf) {
+    CheckMutable();
     std::set<std::string>::const_iterator iter;
     for (iter = buf.begin(); iter != buf.end(); iter++){
       InserUserDictNode(*iter);
@@ -146,6 +162,7 @@ class DictTrie {
   }
 
   void LoadUserDict(const std::string& filePaths) {
+    CheckMutable();
     std::vector<std::string> files = Split(filePaths, "|;");
     for (size_t i = 0; i < files.size(); i++) {
       std::ifstream ifs;
@@ -163,7 +180,24 @@ class DictTrie {
   }
 
 
+  bool IsDictionaryFrozen() const {
+    return initialized_ && options_.mode != CpuCutMode::LegacyDag;
+  }
+  CpuCutMode GetRequestedCpuCutMode() const { return options_.mode; }
+  CpuCutMode GetCpuCutMode() const {
+    return options_.mode == CpuCutMode::DatRawFused && !dat_model_
+        ? CpuCutMode::LegacyDag : options_.mode;
+  }
+  const DatModel* GetDatModel() const { return dat_model_.get(); }
+  const DatBuildStats& GetDatBuildStats() const { return dat_stats_; }
+  size_t GetActualMaxWordLen() const { return actual_max_word_len_; }
+  double GetLoadMilliseconds() const { return load_ms_; }
+  const Trie& GetTrie() const { return *trie_; }
+
  private:
+  void CheckMutable() const {
+    if (IsDictionaryFrozen()) throw std::logic_error("cppjieba dictionary is frozen");
+  }
   struct DictCacheEntry {
     std::shared_ptr<const std::vector<DictUnit> > node_infos;
     double freq_sum;
@@ -215,7 +249,17 @@ class DictTrie {
       valuePointers.push_back(&static_node_infos_[i]);
     }
 
-    trie_ = new Trie(words, valuePointers);
+    std::unique_ptr<Trie> trie(new Trie(words, valuePointers));
+    std::vector<Unicode>().swap(words);
+    for (size_t i = 0; i < valuePointers.size(); ++i) {
+      actual_max_word_len_ = std::max(actual_max_word_len_, valuePointers[i]->word.size());
+    }
+    if (options_.mode == CpuCutMode::DatRawFused) {
+      DatBuildResult result = DatBuilder::Build(valuePointers, min_weight_, options_.dat_build_options);
+      dat_model_ = std::move(result.model);
+      dat_stats_ = std::move(result.stats);
+    }
+    trie_ = trie.release();
   }
 
   bool MakeNodeInfo(DictUnit& node_info,
@@ -305,6 +349,12 @@ class DictTrie {
   std::vector<DictUnit> static_node_infos_;
   std::deque<DictUnit> active_node_infos_; // must not be std::vector
   Trie * trie_;
+  CpuCutOptions options_;
+  bool initialized_;
+  size_t actual_max_word_len_;
+  double load_ms_;
+  std::unique_ptr<const DatModel> dat_model_;
+  DatBuildStats dat_stats_;
 
   double freq_sum_;
   double min_weight_;

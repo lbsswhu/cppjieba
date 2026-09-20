@@ -37,18 +37,27 @@ class QuerySegment: public SegmentBase {
     PreFilter::Range range;
     vector<WordRange> wrs;
     wrs.reserve(sentence.size()/2);
+    MPCutScratch mpScratch;
+    HmmScratch hmmScratch;
     while (pre_filter.HasNext()) {
       range = pre_filter.Next();
-      Cut(range.begin, range.end, wrs, hmm);
+      CutWithScratch(range.begin, range.end, wrs, hmm, mpScratch, hmmScratch);
     }
     words.clear();
     words.reserve(wrs.size());
     GetWordsFromWordRanges(sentence, wrs, words);
   }
   void Cut(RuneStrArray::const_iterator begin, RuneStrArray::const_iterator end, vector<WordRange>& res, bool hmm) const {
+    MPCutScratch mpScratch;
+    HmmScratch hmmScratch;
+    CutWithScratch(begin, end, res, hmm, mpScratch, hmmScratch);
+  }
+  void CutWithScratch(RuneStrArray::const_iterator begin,
+                      RuneStrArray::const_iterator end, vector<WordRange>& res,
+                      bool hmm, MPCutScratch& mpScratch, HmmScratch& hmmScratch) const {
     //use mix Cut first
     vector<WordRange> mixRes;
-    mixSeg_.Cut(begin, end, mixRes, hmm);
+    mixSeg_.CutWithScratch(begin, end, mixRes, hmm, mpScratch, hmmScratch);
 
     vector<WordRange> fullRes;
     for (vector<WordRange>::const_iterator mixResItr = mixRes.begin(); mixResItr != mixRes.end(); mixResItr++) {

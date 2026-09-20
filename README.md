@@ -13,7 +13,7 @@ CppJieba是"结巴(Jieba)"中文分词的C++版本
 ### 主要特点
 
 - 🚀 高性能：经过线上环境验证的稳定性和性能表现
-- 📦 易集成：源代码以头文件形式提供 (`include/cppjieba/*.hpp`)，包含即可使用
+- 📦 易集成：C++11 接口位于 `include/cppjieba/`，链接 `cppjieba` 构建器库即可使用
 - 🔍 多种分词模式：支持精确模式、全模式、搜索引擎模式等
 - 📚 自定义词典：支持用户自定义词典，支持多词典路径（使用'|'或';'分隔）
 - 💻 跨平台：支持 Linux、macOS、Windows 操作系统
@@ -24,9 +24,9 @@ CppJieba是"结巴(Jieba)"中文分词的C++版本
 ### 环境要求
 
 - C++ 编译器：
-  - g++ (推荐 4.1 以上版本)
+  - 支持 C++11 的 g++
   - 或 clang++
-- cmake (推荐 2.6 以上版本)
+- cmake 3.14 以上（测试依赖使用 FetchContent）
 
 ### 安装步骤
 
@@ -35,11 +35,37 @@ git clone https://github.com/yanyiwu/cppjieba.git
 cd cppjieba
 mkdir build
 cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 
 make test
 ```
+
+### CPU 优化模式
+
+默认构造保留 Legacy DAG 行为；以下选项启用位图 raw DAT、融合反向 DP 和独立的 HMM 稠密发射表/滚动分数优化：
+
+```cpp
+#include "cppjieba/Jieba.hpp"
+
+cppjieba::CpuCutOptions options;
+options.mode = cppjieba::CpuCutMode::DatRawFused;
+options.optimize_hmm = true;
+cppjieba::Jieba jieba("dict/jieba.dict.utf8", "dict/hmm_model.utf8",
+                     "dict/user.dict.utf8", "dict/idf.utf8",
+                     "dict/stop_words.utf8", options);
+```
+
+CMake 调用方使用 `target_link_libraries(app PRIVATE cppjieba)`；直接编译使用：
+
+```sh
+c++ -std=c++11 -O3 -fno-fast-math -ffp-contract=off -pthread -Iinclude \
+    app.cpp src/DatBuilder.cpp -o app
+```
+
+新版初始化路径需要链接构建器，包括 Legacy 模式。优化模式完成启动加载后冻结词典：`InsertUserWord`/`DeleteUserWord` 返回 false，`LoadUserDict`/`InserUserDictNode` 抛出 `std::logic_error`。DAT 超过资源或格式预算时回退 Legacy，冻结契约仍然有效。通过 `GetDictTrie()->GetCpuCutMode()` 和 `GetDatBuildStats()` 查询实际后端及失败原因。HMM 优化选项要求模型在构造后不再修改，包括旧的公开概率字段。
+
+原 Pointer Trie 保留用于 `Find`、词性和全模式等兼容接口，因此 DAT 和稠密发射表会增加模型常驻内存；收益主要来自热路径和每次调用工作区。实现边界、基准方法和实测结果见 [CPU 性能报告](docs/cpu-performance.md)。
 
 ### Benchmark
 
