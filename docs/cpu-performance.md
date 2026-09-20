@@ -1,5 +1,7 @@
 # CPU DAT、融合 DP 与 HMM 优化实测（2026-09-18）
 
+> 本文是提交 `8b8a3f7` 的历史测量，包含旧 Pointer Trie。当前代码已移除该结构，见 [DAT 独立模型报告](dat-only-performance.md)。
+
 已实现 `jieba_cpu_dat_dp_design.md` 的主词典优化及第 9 节 HMM 优化，保留 Legacy 默认路径。**发布评估：当前不切换默认后端、不发布新版本。** 热态吞吐有明确收益，但 DAT 增加初始化耗时和模型 RSS；构建器改为需要链接的库，也需要下游适配。Windows/ARM64 未在本机执行测试，不能把本机通过当作完整平台发布验收。
 
 ## 方法与版本

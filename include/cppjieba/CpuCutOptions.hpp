@@ -5,15 +5,15 @@
 
 namespace cppjieba {
 
-enum class CpuCutMode { LegacyDag, PointerFused, DatRawFused };
+enum class CpuCutMode { DatRawFused = 2 };
 
-// Non-legacy dictionaries are frozen after startup, even after DAT fallback.
+// Dictionaries use raw DAT exclusively and are frozen after startup.
 struct CpuCutOptions {
   CpuCutMode mode;
   bool optimize_hmm;
   size_t hmm_dense_budget_bytes;
   DatBuildOptions dat_build_options;
-  CpuCutOptions() : mode(CpuCutMode::LegacyDag), optimize_hmm(false),
+  CpuCutOptions() : mode(CpuCutMode::DatRawFused), optimize_hmm(false),
       hmm_dense_budget_bytes(8 * 1024 * 1024) {}
 };
 

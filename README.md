@@ -15,7 +15,7 @@ CppJieba是"结巴(Jieba)"中文分词的C++版本
 - 🚀 高性能：经过线上环境验证的稳定性和性能表现
 - 📦 易集成：C++11 接口位于 `include/cppjieba/`，链接 `cppjieba` 构建器库即可使用
 - 🔍 多种分词模式：支持精确模式、全模式、搜索引擎模式等
-- 📚 自定义词典：支持用户自定义词典，支持多词典路径（使用'|'或';'分隔）
+- 📚 自定义词典：支持启动时加载用户自定义词典，支持多词典路径（使用'|'或';'分隔）
 - 💻 跨平台：支持 Linux、macOS、Windows 操作系统
 - 🌈 UTF-8编码：原生支持 UTF-8 编码的中文处理
 
@@ -43,7 +43,7 @@ make test
 
 ### CPU 优化模式
 
-默认构造保留 Legacy DAG 行为；以下选项启用位图 raw DAT、融合反向 DP 和独立的 HMM 稠密发射表/滚动分数优化：
+默认构造使用位图 raw DAT 和融合反向 DP，原 Pointer Trie 已删除。以下选项另外启用 HMM 稠密发射表和滚动分数优化：
 
 ```cpp
 #include "cppjieba/Jieba.hpp"
@@ -63,9 +63,9 @@ c++ -std=c++11 -O3 -fno-fast-math -ffp-contract=off -pthread -Iinclude \
     app.cpp src/DatBuilder.cpp -o app
 ```
 
-新版初始化路径需要链接构建器，包括 Legacy 模式。优化模式完成启动加载后冻结词典：`InsertUserWord`/`DeleteUserWord` 返回 false，`LoadUserDict`/`InserUserDictNode` 抛出 `std::logic_error`。DAT 超过资源或格式预算时回退 Legacy，冻结契约仍然有效。通过 `GetDictTrie()->GetCpuCutMode()` 和 `GetDatBuildStats()` 查询实际后端及失败原因。HMM 优化选项要求模型在构造后不再修改，包括旧的公开概率字段。
+初始化路径需要链接构建器。所有词典完成启动加载后冻结：`InsertUserWord`/`DeleteUserWord` 返回 false，公开 `LoadUserDict`/`InserUserDictNode` 抛出 `std::logic_error`。请通过构造参数的用户词典路径加载自定义词，多个文件使用 `|` 或 `;` 分隔。DAT 超过资源或格式预算时构造函数抛出 `DatBuildError`，其 `GetStats()` 提供失败类别和原因；不会回退到已删除的旧后端。构造成功后可用 `GetDatBuildStats()` 查看模型规模和耗时。HMM 优化选项要求模型在构造后不再修改，包括保留的公开概率字段。
 
-原 Pointer Trie 保留用于 `Find`、词性和全模式等兼容接口，因此 DAT 和稠密发射表会增加模型常驻内存；收益主要来自热路径和每次调用工作区。实现边界、基准方法和实测结果见 [CPU 性能报告](docs/cpu-performance.md)。
+`Find`、词性、搜索和全模式均使用 DAT。终点的独立词条索引保留 `DictUnit` 的词和词性；头文件 `Trie.hpp` 已删除，需要这些数据类型的调用方使用 `DictTypes.hpp`。`LegacyDag`、`PointerFused` 选项也已移除。超长词使用 `size_t` 词长回溯，不再依赖旧 DAG 内核。删除旧 Trie 前后的内存与性能比较见 [DAT 独立模型报告](docs/dat-only-performance.md)，此前的优化测量保留在 [初版性能报告](docs/cpu-performance.md)。
 
 ### Benchmark
 
@@ -104,8 +104,7 @@ make benchmark
 小明硕士毕业于中国科学院计算所，后在日本京都大学深造
 [demo] CutForSearch
 小明/硕士/毕业/于/中国/科学/学院/科学院/中国科学院/计算/计算所/，/后/在/日本/京都/大学/日本京都大学/深造
-[demo] Insert User Word
-男默/女泪
+[demo] Startup User Dictionary
 男默女泪
 [demo] CutForSearch Word With Offset
 [{"word": "小明", "offset": 0}, {"word": "硕士", "offset": 6}, {"word": "毕业", "offset": 12}, {"word": "于", "offset": 18}, {"word": "中国", "offset": 21}, {"word": "科学", "offset": 27}, {"word": "学院", "offset": 30}, {"word": "科学院", "offset": 27}, {"word": "中国科学院", "offset": 21}, {"word": "计算", "offset": 36}, {"word": "计算所", "offset": 36}, {"word": "，", "offset": 45}, {"word": "后", "offset": 48}, {"word": "在", "offset": 51}, {"word": "日本", "offset": 54}, {"word": "京都", "offset": 60}, {"word": "大学", "offset": 66}, {"word": "日本京都大学", "offset": 54}, {"word": "深造", "offset": 72}]

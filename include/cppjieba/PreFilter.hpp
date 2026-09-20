@@ -1,7 +1,7 @@
 #ifndef CPPJIEBA_PRE_FILTER_H
 #define CPPJIEBA_PRE_FILTER_H
 
-#include "Trie.hpp"
+#include "Unicode.hpp"
 #include "Utils.hpp"
 
 namespace cppjieba {

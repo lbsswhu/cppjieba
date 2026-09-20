@@ -80,6 +80,75 @@ TEST(DatCpuTest, LastDuplicateWinsAndWeightsPreserveBits) {
   }
 }
 
+TEST(DatCpuTest, TerminalIdentityUsesOriginalIndexAndLastDuplicate) {
+  // Source order differs from Rune order. Equal weights must not merge the
+  // identity needed to retrieve tags and other DictUnit payloads.
+  std::vector<DictUnit> units{Unit({90}, -1.0), Unit({}, -1.0),
+                            Unit({10, 20}, -1.0), Unit({10}, -1.0),
+                            Unit({90}, -1.0), Unit({10, 20}, -1.0)};
+  units[0].tag = "superseded";
+  units[4].tag = "last";
+  DatBuildResult result = Build(units);
+  ASSERT_TRUE(result.model);
+  EXPECT_EQ(1u, result.stats.unique_weights);
+  EXPECT_EQ(4u, result.model->TerminalSourceIndex(Lookup(*result.model, units[0].word)));
+  EXPECT_EQ(3u, result.model->TerminalSourceIndex(Lookup(*result.model, units[3].word)));
+  EXPECT_EQ(5u, result.model->TerminalSourceIndex(Lookup(*result.model, units[2].word)));
+  EXPECT_EQ(std::numeric_limits<uint32_t>::max(),
+            result.model->TerminalSourceIndex(result.model->Root()));
+  EXPECT_EQ(result.stats.slot_count * (sizeof(uint64_t) + sizeof(uint32_t)) + sizeof(double),
+            result.stats.model_bytes);
+}
+
+TEST(DatCpuTest, NonterminalIdentitySentinelAndIndependentModelLifetime) {
+  DatBuildResult result;
+  {
+    std::vector<DictUnit> units{Unit({100, 200}, -2.0)};
+    result = Build(units);
+  }
+  ASSERT_TRUE(result.model);
+  DatCursor cursor = result.model->Root();
+  ASSERT_TRUE(result.model->StepRaw(100, cursor));
+  EXPECT_FALSE(result.model->IsTerminal(cursor));
+  EXPECT_EQ(std::numeric_limits<uint32_t>::max(), result.model->TerminalSourceIndex(cursor));
+  ASSERT_TRUE(result.model->StepRaw(200, cursor));
+  EXPECT_EQ(0u, result.model->TerminalSourceIndex(cursor));
+  EXPECT_EQ(-2.0, result.model->TerminalWeight(cursor));
+}
+
+TEST(DatCpuTest, SourceIndexArrayCountsAgainstMemoryBudget) {
+  const std::vector<DictUnit> units{Unit({0}, -1.0), Unit({65534}, -1.0)};
+  DatBuildOptions options;
+  options.max_temporary_bytes = 800000;
+  DatBuildResult result = Build(units, options);
+  EXPECT_FALSE(result.model);
+  EXPECT_EQ(DatBuildStatus::ResourceLimit, result.stats.status);
+  options.max_temporary_bytes = 1000000;
+  result = Build(units, options);
+  ASSERT_TRUE(result.model);
+  EXPECT_EQ(1u, result.model->TerminalSourceIndex(Lookup(*result.model, units[1].word)));
+  EXPECT_EQ(result.stats.slot_count * sizeof(uint64_t), result.stats.topology_bytes);
+  EXPECT_EQ(result.stats.slot_count * sizeof(uint32_t), result.stats.source_index_bytes);
+  EXPECT_EQ(sizeof(double), result.stats.weight_bytes);
+  EXPECT_EQ(result.stats.topology_bytes + result.stats.source_index_bytes + result.stats.weight_bytes,
+            result.stats.model_bytes);
+}
+
+TEST(DatCpuTest, BuildErrorPreservesStructuredFailure) {
+  DatBuildOptions options;
+  options.max_slots = 0;
+  DatBuildResult result = Build({Unit({1}, -1)}, options);
+  ASSERT_FALSE(result.model);
+  try {
+    throw DatBuildError(result.stats);
+  } catch (const DatBuildError& error) {
+    EXPECT_EQ(result.stats.status, error.GetStats().status);
+    EXPECT_EQ(result.stats.reason, error.GetStats().reason);
+    EXPECT_EQ(result.stats.build_ms, error.GetStats().build_ms);
+    EXPECT_STREQ(result.stats.reason.c_str(), error.what());
+  }
+}
+
 TEST(DatCpuTest, EmptyDictionaryAndLongWord) {
   DatBuildResult empty = Build({Unit({}, std::numeric_limits<double>::infinity())});
   ASSERT_TRUE(empty.model);

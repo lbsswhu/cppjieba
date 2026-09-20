@@ -1,0 +1,300 @@
+{
+  "metadata": {
+    "kind": "metadata",
+    "created_utc": "2026-09-20T01:21:36.497157+00:00",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "machine": "x86_64",
+    "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+    "cpu_affinity": [
+      0,
+      2,
+      4,
+      6
+    ],
+    "revision": "8b8a3f796fb7b42d77c1d4bcf984df00fdc4bd64",
+    "build_metadata": "Focused follow-up for short Search 4-thread 8% median regression/high variance; GCC11.4 C++11 O3 DNDEBUG strictFP; identical source/inputs; 2 million requests per process",
+    "binaries": {
+      "performance": {
+        "path": "/tmp/cppjieba-dat-only-release/cpu_benchmark",
+        "sha256": "aaf9b58bd5da04b81905f3ff65b2ac769fcad3539f7a72f568ba5a157bb01739"
+      },
+      "previous": {
+        "path": "/tmp/cppjieba-dat-merged-before-benchmark",
+        "sha256": "2f7298d7fbf0618f480233495ee158393eb3c3f1092bb66cab4d0b5988c11b30"
+      }
+    },
+    "input_sha256": {
+      "dict/jieba.dict.utf8": "6f7d4350e8861ef4139b2e3a6fad05430c19ae71f4b8378190edecac8aae2e6a",
+      "dict/hmm_model.utf8": "f17790586ac86dd048c8adffed052c4bd2b28ed0682972c1275e59040c0589a7",
+      "dict/user.dict.utf8": "24e5caba06a8a0bf707b00ff6e1c78afa4d878517dc2cf8b7a88707b980512d3",
+      "dict/idf.utf8": "dbd1e03d72b2263cc8d84a4304ed77677eed9e7deaf43a1a5133bbba9733b535",
+      "dict/stop_words.utf8": "b788b8a939d2e2fe079abd579ea98f12f9fb84370bfd0dddd81bb9381f7ab42c",
+      "test/testdata/synthetic_doc.utf8": "fe72dd38c2f2414b98ba0df4995cc1c2055f38f962f6c92e5bc4e5c2b24eabf3"
+    },
+    "benchmark_source_sha256": "b1bd66afb3baa77763bca6b692e8d97ba1a1713c74041bffb0a9d7e545b10932",
+    "seed": 20260918,
+    "repeats": 10,
+    "iterations": 100000,
+    "notes": [
+      "Each subprocess creates one fresh model; OS page cache is not evicted.",
+      "Cold time includes all Jieba models and keyword dictionaries.",
+      "MP uses predecoded full ranges; other APIs include decoding and output materialization.",
+      "Find uses predecoded complete lookup strings sampled from the same dictionary with deterministic misses.",
+      "Short and lookup corpora run 20 times the requested iterations.",
+      "Optional --corpus full_document uses the complete file and max(1, iterations // 20) requests; all excludes it.",
+      "Diagnostic allocation and MP counters are excluded from performance comparisons.",
+      "Allocation bytes are requested C++ new/new[] bytes, not malloc metadata or stack storage.",
+      "Workers share one model and inherit the recorded CPU affinity; no per-worker pinning."
+    ]
+  },
+  "results": [
+    {
+      "variant": "D",
+      "kind": "cold",
+      "corpus": "",
+      "api": "",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 10,
+      "metrics": {
+        "cold_ms": {
+          "median": 867.1064349999999,
+          "minimum": 850.143691,
+          "maximum": 939.443122,
+          "stdev": 31.222224917211893
+        },
+        "model_rss_bytes": {
+          "median": 91422720.0,
+          "minimum": 91418624,
+          "maximum": 91553792,
+          "stdev": 55089.12742900262
+        },
+        "model_rss_delta_bytes": {
+          "median": 88014848.0,
+          "minimum": 88010752,
+          "maximum": 88145920,
+          "stdev": 55089.12742900262
+        },
+        "initialization_peak_rss_bytes": {
+          "median": 104591360.0,
+          "minimum": 104456192,
+          "maximum": 104595456,
+          "stdev": 55968.67553114966
+        },
+        "dictionary_load_ms": {
+          "median": 133.2552205,
+          "minimum": 129.531221,
+          "maximum": 146.239557,
+          "stdev": 5.162265827296323
+        },
+        "dat_build_ms": {
+          "median": 673.5731185,
+          "minimum": 660.420041,
+          "maximum": 727.717845,
+          "stdev": 24.225582749201756
+        },
+        "dat_layout_ms": {
+          "median": 545.9690465,
+          "minimum": 538.277088,
+          "maximum": 589.084191,
+          "stdev": 19.281745278123296
+        },
+        "dat_validation_ms": {
+          "median": 19.6676415,
+          "minimum": 16.397503,
+          "maximum": 22.843535,
+          "stdev": 2.3245418433789387
+        }
+      },
+      "ratios_to_previous_D": {
+        "cold_ms": 0.9671048318722809,
+        "model_rss_bytes": 0.5873684210526315,
+        "model_rss_delta_bytes": 0.5781317262160999,
+        "initialization_peak_rss_bytes": 0.6719736842105263,
+        "dictionary_load_ms": 0.7491965238294603,
+        "dat_build_ms": 1.0302115207387619,
+        "dat_layout_ms": 1.0278644858813393,
+        "dat_validation_ms": 1.125914779498039
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 10,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 279914690.209,
+          "minimum": 229844232.177,
+          "maximum": 295506420.263,
+          "stdev": 24816957.20477802
+        },
+        "runes_per_second": {
+          "median": 103622265.1255,
+          "minimum": 85086566.7194,
+          "maximum": 109394203.655,
+          "stdev": 9187046.657512218
+        },
+        "requests_per_second": {
+          "median": 10765949.6234,
+          "minimum": 8840162.77604,
+          "maximum": 11365631.5486,
+          "stdev": 954498.3540234965
+        },
+        "latency_p50_us": {
+          "median": 0.2955,
+          "minimum": 0.289,
+          "maximum": 0.316,
+          "stdev": 0.009926955446885245
+        },
+        "latency_p95_us": {
+          "median": 0.428,
+          "minimum": 0.382,
+          "maximum": 0.589,
+          "stdev": 0.0863522501797788
+        },
+        "latency_p99_us": {
+          "median": 0.765,
+          "minimum": 0.427,
+          "maximum": 0.845,
+          "stdev": 0.15515372305483932
+        }
+      },
+      "ratios_to_previous_D": {
+        "bytes_per_second": 1.124246775507998,
+        "runes_per_second": 1.124246775508038,
+        "requests_per_second": 1.1242467755050014,
+        "latency_p50_us": 0.8665689149560116,
+        "latency_p95_us": 0.8416912487708946,
+        "latency_p99_us": 0.9683544303797468
+      }
+    },
+    {
+      "variant": "previous-D",
+      "kind": "cold",
+      "corpus": "",
+      "api": "",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 10,
+      "metrics": {
+        "cold_ms": {
+          "median": 896.6002510000001,
+          "minimum": 879.700072,
+          "maximum": 959.501193,
+          "stdev": 22.156057665357935
+        },
+        "model_rss_bytes": {
+          "median": 155648000.0,
+          "minimum": 155643904,
+          "maximum": 155648000,
+          "stdev": 2115.1653048087437
+        },
+        "model_rss_delta_bytes": {
+          "median": 152240128.0,
+          "minimum": 152236032,
+          "maximum": 152240128,
+          "stdev": 2115.1653048087437
+        },
+        "initialization_peak_rss_bytes": {
+          "median": 155648000.0,
+          "minimum": 155643904,
+          "maximum": 155648000,
+          "stdev": 2115.1653048087437
+        },
+        "dictionary_load_ms": {
+          "median": 177.8641735,
+          "minimum": 172.839492,
+          "maximum": 189.958757,
+          "stdev": 4.7764208841328095
+        },
+        "dat_build_ms": {
+          "median": 653.8202155,
+          "minimum": 643.444178,
+          "maximum": 701.032075,
+          "stdev": 16.70171865382367
+        },
+        "dat_layout_ms": {
+          "median": 531.1683145,
+          "minimum": 523.261874,
+          "maximum": 570.289922,
+          "stdev": 13.678525308370872
+        },
+        "dat_validation_ms": {
+          "median": 17.468144000000002,
+          "minimum": 15.221628,
+          "maximum": 19.148243,
+          "stdev": 1.3450111201058854
+        }
+      },
+      "ratios_to_previous_D": {
+        "cold_ms": 1.0,
+        "model_rss_bytes": 1.0,
+        "model_rss_delta_bytes": 1.0,
+        "initialization_peak_rss_bytes": 1.0,
+        "dictionary_load_ms": 1.0,
+        "dat_build_ms": 1.0,
+        "dat_layout_ms": 1.0,
+        "dat_validation_ms": 1.0
+      }
+    },
+    {
+      "variant": "previous-D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 10,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 248979758.0985,
+          "minimum": 238239077.12,
+          "maximum": 261246590.355,
+          "stdev": 8684931.91687905
+        },
+        "runes_per_second": {
+          "median": 92170391.2192,
+          "minimum": 88194273.7414,
+          "maximum": 96711478.1603,
+          "stdev": 3215094.988497866
+        },
+        "requests_per_second": {
+          "median": 9576144.542255,
+          "minimum": 9163041.42768,
+          "maximum": 10047945.7829,
+          "stdev": 334035.8429593106
+        },
+        "latency_p50_us": {
+          "median": 0.341,
+          "minimum": 0.332,
+          "maximum": 0.346,
+          "stdev": 0.005138093031466034
+        },
+        "latency_p95_us": {
+          "median": 0.5085000000000001,
+          "minimum": 0.422,
+          "maximum": 0.679,
+          "stdev": 0.09953787665451223
+        },
+        "latency_p99_us": {
+          "median": 0.79,
+          "minimum": 0.553,
+          "maximum": 0.822,
+          "stdev": 0.0966482741123135
+        }
+      },
+      "ratios_to_previous_D": {
+        "bytes_per_second": 1.0,
+        "runes_per_second": 1.0,
+        "requests_per_second": 1.0,
+        "latency_p50_us": 1.0,
+        "latency_p95_us": 1.0,
+        "latency_p99_us": 1.0
+      }
+    }
+  ]
+}

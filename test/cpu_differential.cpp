@@ -1,4 +1,5 @@
-// Integration differential checks for the independently retained Legacy DAG path.
+// DAT-only contract, HMM-equivalence and concurrent-read checks.
+// Independent previous-version output comparison lives in compare_dat_only.py.
 // Standalone: c++ -std=c++11 -O2 -pthread -Iinclude test/cpu_differential.cpp src/DatBuilder.cpp -o cpu_differential
 #include <atomic>
 #include <chrono>
@@ -180,60 +181,40 @@ void CheckFixtures() {
   TempFile users1("南京市 123 first\n南 nz\n𠀀 5 x\n启动用户词\n");
   TempFile users2("南京市 456 last\n");
   const std::string users = users1.path + "|" + users2.path;
-  CpuCutOptions legacy;
-  DictTrie old(main_dict.path, users, DictTrie::WordWeightMedian, legacy);
-  Require(!old.IsDictionaryFrozen(), "Default Legacy mode unexpectedly frozen");
-  Require(old.GetCpuCutMode() == CpuCutMode::LegacyDag, "Default mode changed");
-  for (int variant = 0; variant < 6; ++variant) {
+  DictTrie candidate(main_dict.path, users);
+  Require(candidate.IsDictionaryFrozen(), "Default DAT-only model must be frozen");
+  Require(candidate.GetCpuCutMode() == CpuCutMode::DatRawFused, "Default DAT-only mode changed");
+  RuneStrArray r;
+  DecodeUTF8RunesInString("南京市", r);
+  Require(candidate.Find(r.begin(), r.end())->tag == "last", "Startup override order changed");
+  Require(candidate.IsUserDictSingleChineseWord(0x5357), "Startup single Rune not protected");
+  CheckFrozen(candidate, users1.path);
+  // A failed DAT construction must fail clearly; no Pointer Trie remains to
+  // support the former implicit fallback.
+  for (int budget = 0; budget < 4; ++budget) {
     CpuCutOptions options;
-    options.mode = variant == 0 ? CpuCutMode::PointerFused : CpuCutMode::DatRawFused;
-    if (variant == 2) options.dat_build_options.max_slots = 1;
-    if (variant == 3) options.dat_build_options.max_temporary_bytes = 1;
-    if (variant == 4) options.dat_build_options.max_unique_weights = 1;
-    if (variant == 5) options.dat_build_options.max_build_ms = 0.000001;
-    DictTrie candidate(main_dict.path, users, DictTrie::WordWeightMedian, options);
-    Require(candidate.GetRequestedCpuCutMode() == options.mode, "Requested mode lost");
-    if (variant >= 2) {
-      Require(candidate.GetCpuCutMode() == CpuCutMode::LegacyDag, "DAT budget did not fall back");
-      Require(!candidate.GetDatBuildStats().reason.empty(), "Fallback needs diagnostic reason");
-      Require(candidate.GetDatModel() == NULL, "Failed build published a DAT");
-    } else {
-      Require(candidate.GetCpuCutMode() == options.mode, "Fixture unexpectedly fell back");
+    if (budget == 0) options.dat_build_options.max_slots = 1;
+    if (budget == 1) options.dat_build_options.max_temporary_bytes = 1;
+    if (budget == 2) options.dat_build_options.max_unique_weights = 1;
+    if (budget == 3) options.dat_build_options.max_build_ms = 0.000001;
+    bool rejected = false;
+    try { DictTrie failure(main_dict.path, users, DictTrie::WordWeightMedian, options); }
+    catch (const DatBuildError& error) {
+      rejected = true;
+      Require(!error.GetStats().reason.empty(), "DAT construction error needs a reason");
+      Require(error.GetStats().status != DatBuildStatus::Success, "Failed build reported success");
     }
-    MPSegment a(&old), b(&candidate);
-    const std::string texts[] = {"", "甲", prefix + prefix, "南京市长江大桥", "南𠀀启动用户词未知"};
-    for (size_t i = 0; i < sizeof(texts) / sizeof(texts[0]); ++i) {
-      for (size_t length = 0; length < 28; ++length) {
-        std::vector<Word> wa, wb;
-        a.Cut(texts[i], wa, length); b.Cut(texts[i], wb, length);
-        Compare(wa, wb, "fixture MP", texts[i]);
-      }
-    }
-    RuneStrArray r;
-    DecodeUTF8RunesInString("南京市", r);
-    Require(candidate.Find(r.begin(), r.end())->tag == "last", "Startup override order changed");
-    Require(candidate.IsUserDictSingleChineseWord(0x5357), "Startup single Rune not protected");
-    CheckFrozen(candidate, users1.path);
+    Require(rejected, "Insufficient DAT budget did not reject construction");
   }
-  Require(old.InsertUserWord("兼容动态词", 9999, "legacy"), "Legacy insertion no longer works");
-  Require(old.Find("兼容动态词"), "Legacy inserted word not found");
-  // A zero-frequency startup override has a non-finite log weight. The legacy
-  // dictionary is still usable, but the DAT must reject the model and retain
-  // both legacy output and the explicitly requested frozen contract.
   TempFile nonfinite_users("南京市 0 nz\n");
-  CpuCutOptions unsupported;
-  unsupported.mode = CpuCutMode::DatRawFused;
-  DictTrie nonfinite_old(main_dict.path, nonfinite_users.path);
-  DictTrie nonfinite_new(main_dict.path, nonfinite_users.path, DictTrie::WordWeightMedian, unsupported);
-  Require(nonfinite_new.GetCpuCutMode() == CpuCutMode::LegacyDag,
-          "Non-finite startup weight did not select Legacy fallback");
-  Require(nonfinite_new.GetDatBuildStats().status == DatBuildStatus::Unsupported,
-          "Non-finite model did not report Unsupported");
-  std::vector<Word> na, nb;
-  MPSegment(&nonfinite_old).Cut("南京市长江大桥", na);
-  MPSegment(&nonfinite_new).Cut("南京市长江大桥", nb);
-  Compare(na, nb, "non-finite model fallback", "南京市长江大桥");
-  CheckFrozen(nonfinite_new, users1.path);
+  bool rejected = false;
+  try { DictTrie invalid(main_dict.path, nonfinite_users.path); }
+  catch (const DatBuildError& error) {
+    rejected = true;
+    Require(error.GetStats().status == DatBuildStatus::Unsupported,
+            "Non-finite model did not report Unsupported");
+  }
+  Require(rejected, "Non-finite startup weight did not reject construction");
 }
 
 void CheckLongWords() {
@@ -250,22 +231,25 @@ void CheckLongWords() {
     words.push_back(word);
   }
   TempFile file(data.str());
-  DictTrie old(file.path);
-  MPSegment a(&old);
+  DictTrie dict(file.path);
+  MPSegment mp(&dict);
+  Require(dict.GetActualMaxWordLen() == 65536, "Actual maximum word length truncated");
   const size_t limits[] = {0, 1, 2, 512, 513, 65535, 65536, std::numeric_limits<size_t>::max()};
-  for (int mode = 0; mode < 2; ++mode) {
-    CpuCutOptions options;
-    options.mode = mode ? CpuCutMode::DatRawFused : CpuCutMode::PointerFused;
-    DictTrie candidate(file.path, "", DictTrie::WordWeightMedian, options);
-    MPSegment b(&candidate);
-    Require(candidate.GetActualMaxWordLen() == 65536, "Actual maximum word length truncated");
-    for (size_t i = 0; i < words.size(); ++i) {
-      for (size_t l = 0; l < sizeof(limits) / sizeof(limits[0]); ++l) {
-        std::vector<Word> wa, wb;
-        a.Cut(words[i], wa, limits[l]); b.Cut(words[i], wb, limits[l]);
-        Compare(wa, wb, "long word MP", words[i]);
-        if (limits[l] >= sizes[i]) Require(wb.size() == 1, "Long word did not survive recovery");
+  for (size_t i = 0; i < words.size(); ++i) {
+    for (size_t l = 0; l < sizeof(limits) / sizeof(limits[0]); ++l) {
+      std::vector<Word> output;
+      mp.Cut(words[i], output, limits[l]);
+      const size_t expected_count = limits[l] >= sizes[i] ? 1 : sizes[i];
+      Require(output.size() == expected_count, "Long word boundary/count mismatch");
+      size_t bytes = 0, runes = 0;
+      for (size_t n = 0; n < output.size(); ++n) {
+        Require(output[n].offset == bytes && output[n].unicode_offset == runes,
+                "Long word coordinates changed");
+        Require(output[n].word == words[i].substr(bytes, output[n].word.size()),
+                "Long word output does not recover the input");
+        bytes += output[n].word.size(); runes += output[n].unicode_length;
       }
+      Require(bytes == words[i].size() && runes == sizes[i], "Long output does not cover input");
     }
   }
 }
@@ -279,13 +263,13 @@ int main(int argc, char** argv) {
     CheckFixtures();
     CheckLongWords();
     CpuCutOptions defaults;
-    std::unique_ptr<Jieba> legacy = MakeJieba(repo, defaults);
+    std::unique_ptr<Jieba> reference = MakeJieba(repo, defaults);
     std::vector<std::unique_ptr<Jieba> > variants;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 2; ++i) {
       CpuCutOptions options;
-      options.mode = i == 0 ? CpuCutMode::PointerFused : CpuCutMode::DatRawFused;
-      options.optimize_hmm = i >= 2;
-      if (i == 3) options.hmm_dense_budget_bytes = 1;
+      options.mode = CpuCutMode::DatRawFused;
+      options.optimize_hmm = true;
+      if (i == 1) options.hmm_dense_budget_bytes = 1;
       variants.push_back(MakeJieba(repo, options));
       Require(variants.back()->GetDictTrie()->GetCpuCutMode() == options.mode,
               "Default dictionary unexpectedly fell back");
@@ -312,7 +296,7 @@ int main(int argc, char** argv) {
       corpus.push_back(text);
     }
     for (size_t v = 0; v < variants.size(); ++v) {
-      for (size_t i = 0; i < corpus.size(); ++i) CheckAll(*legacy, *variants[v], corpus[i]);
+      for (size_t i = 0; i < corpus.size(); ++i) CheckAll(*reference, *variants[v], corpus[i]);
       // Each thread writes only its own outputs while sharing the same model and reference.
       std::vector<std::thread> readers;
       std::vector<std::string> errors(4);
@@ -320,7 +304,7 @@ int main(int argc, char** argv) {
         readers.push_back(std::thread([&, thread]() {
           try {
             for (size_t i = thread; i < corpus.size(); i += errors.size())
-              CheckAll(*legacy, *variants[v], corpus[i]);
+              CheckAll(*reference, *variants[v], corpus[i]);
           } catch (const std::exception& e) { errors[thread] = e.what(); }
         }));
       }
@@ -330,9 +314,9 @@ int main(int argc, char** argv) {
     // Invalid trailing UTF-8 must keep the existing decode-failure behavior too.
     const std::string invalid[] = {std::string("\xff", 1), std::string("中\xe4\xb8", 5)};
     for (size_t v = 0; v < variants.size(); ++v)
-      for (size_t i = 0; i < 2; ++i) CheckAll(*legacy, *variants[v], invalid[i]);
+      for (size_t i = 0; i < 2; ++i) CheckAll(*reference, *variants[v], invalid[i]);
     std::cout << "cpu differential passed: " << corpus.size()
-              << " texts, 4 optimized variants, all APIs, 4 shared readers, long words and budget fallbacks\n";
+              << " texts, DAT-only HMM variants, all APIs, 4 shared readers, long words and construction failures\n";
     return 0;
   } catch (const std::exception& e) {
     std::cerr << "cpu differential FAILED: " << e.what() << '\n';

@@ -3,7 +3,8 @@
 
 #include "UnicodeFile.hpp"
 #include "Utils.hpp"
-#include "Trie.hpp"
+#include "Unicode.hpp"
+#include <cstring>
 #include <limits>
 #include <new>
 #include <stdexcept>

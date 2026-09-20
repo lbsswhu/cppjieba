@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run fresh-process A/B/C/D measurements and preserve every raw observation.
+"""Run fresh-process DAT-only/previous measurements and preserve raw observations.
 
 Example:
   python3 test/run_cpu_benchmark.py --binary build/cpu_benchmark \
@@ -10,6 +10,8 @@ An independent original binary can be compiled from cpu_benchmark.cpp with
 -DCPPJIEBA_CPU_BASELINE and -I/path/to/original/include using the same compiler
 and optimization flags, then supplied with --baseline-binary. Diagnostic runs
 are separate processes and their timings/RSS are never used for comparisons.
+For 8b8a3f7 versus DAT-only, compile the same benchmark with
+-DCPPJIEBA_CPU_PREVIOUS against that checkout and pass --previous-binary.
 """
 
 import argparse
@@ -68,14 +70,16 @@ def summarize(rows):
     lookup = {(row["variant"], row["kind"], row["corpus"], row["api"], row["threads"], row["diagnostic"]): row
               for row in result}
     for row in result:
-        key = ("A", row["kind"], row["corpus"], row["api"], row["threads"], row["diagnostic"])
-        baseline = lookup.get(key)
-        if baseline:
-            row["ratios_to_A"] = {}
-            for metric, value in row["metrics"].items():
-                ref = baseline["metrics"].get(metric, {}).get("median")
-                if ref:
-                    row["ratios_to_A"][metric] = value["median"] / ref
+        for reference in ("A", "previous-A", "previous-D"):
+            key = (reference, row["kind"], row["corpus"], row["api"], row["threads"], row["diagnostic"])
+            baseline = lookup.get(key)
+            if baseline:
+                label = "ratios_to_" + reference.replace("-", "_")
+                row[label] = {}
+                for metric, value in row["metrics"].items():
+                    ref = baseline["metrics"].get(metric, {}).get("median")
+                    if ref:
+                        row[label][metric] = value["median"] / ref
     return result
 
 
@@ -85,22 +89,26 @@ def main():
     parser.add_argument("--binary", type=pathlib.Path, required=True)
     parser.add_argument("--diagnostics-binary", type=pathlib.Path)
     parser.add_argument("--baseline-binary", type=pathlib.Path)
+    parser.add_argument("--previous-binary", type=pathlib.Path)
+    parser.add_argument("--previous-diagnostics-binary", type=pathlib.Path)
+    parser.add_argument("--previous-modes", default="A,D")
     parser.add_argument("--output", type=pathlib.Path, default=pathlib.Path("cpu_benchmark_results.jsonl"))
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--iterations", type=int, default=200)
     parser.add_argument("--diagnostic-iterations", type=int, default=8)
     parser.add_argument("--threads", type=parse_csv_int, default=[1, 4])
     parser.add_argument("--cpus", type=parse_csv_int, help="explicit inherited Linux CPU affinity mask")
-    parser.add_argument("--modes", default="A,B,C,D")
-    parser.add_argument("--corpus", choices=["all", "short", "document", "long", "full_document"], default="all")
-    parser.add_argument("--api", choices=["all", "mp", "cut", "search", "small", "keywords", "hmm"], default="all")
+    parser.add_argument("--modes", default="C,D")
+    parser.add_argument("--corpus", choices=["all", "short", "document", "long", "full_document", "lookup"], default="all")
+    parser.add_argument("--api", choices=["all", "mp", "cut", "search", "small", "keywords", "hmm", "full", "find"], default="all")
     parser.add_argument("--seed", type=int, default=20260918)
     parser.add_argument("--build-metadata", default="", help="compiler command/flags or build-directory description")
     args = parser.parse_args()
     if args.repeats < 1 or args.iterations < 1 or args.diagnostic_iterations < 1 or min(args.threads) < 1:
         parser.error("repeats, iterations and thread counts must be positive")
     modes = args.modes.split(",")
-    if not modes or any(mode not in "ABCD" or len(mode) != 1 for mode in modes):
+    previous_modes = args.previous_modes.split(",")
+    if not modes or any(mode not in "ABCD" or len(mode) != 1 for mode in modes + previous_modes):
         parser.error("--modes must be a comma-separated selection of A,B,C,D")
     if args.cpus:
         if not hasattr(os, "sched_setaffinity"):
@@ -112,6 +120,10 @@ def main():
         binaries["diagnostic"] = args.diagnostics_binary.resolve()
     if args.baseline_binary:
         binaries["original"] = args.baseline_binary.resolve()
+    if args.previous_binary:
+        binaries["previous"] = args.previous_binary.resolve()
+    if args.previous_diagnostics_binary:
+        binaries["previous-diagnostic"] = args.previous_diagnostics_binary.resolve()
     for binary in binaries.values():
         if not binary.is_file():
             parser.error("missing binary: " + str(binary))
@@ -131,7 +143,8 @@ def main():
         notes=["Each subprocess creates one fresh model; OS page cache is not evicted.",
                "Cold time includes all Jieba models and keyword dictionaries.",
                "MP uses predecoded full ranges; other APIs include decoding and output materialization.",
-               "Short corpus runs 20 times the requested iterations.",
+               "Find uses predecoded complete lookup strings sampled from the same dictionary with deterministic misses.",
+               "Short and lookup corpora run 20 times the requested iterations.",
                "Optional --corpus full_document uses the complete file and max(1, iterations // 20) requests; all excludes it.",
                "Diagnostic allocation and MP counters are excluded from performance comparisons.",
                "Allocation bytes are requested C++ new/new[] bytes, not malloc metadata or stack storage.",
@@ -145,14 +158,19 @@ def main():
         batch = [("performance", mode, threads, repeat) for mode in modes for threads in args.threads]
         if "original" in binaries:
             batch += [("original", "A", threads, repeat) for threads in args.threads]
+        if "previous" in binaries:
+            batch += [("previous", mode, threads, repeat) for mode in previous_modes for threads in args.threads]
         rng.shuffle(batch)
         jobs.extend(batch)
     if "diagnostic" in binaries:
         jobs.extend(("diagnostic", mode, threads, 0) for mode in modes for threads in args.threads)
+    if "previous-diagnostic" in binaries:
+        jobs.extend(("previous-diagnostic", mode, threads, 0) for mode in previous_modes for threads in args.threads)
     with args.output.open("w", encoding="utf-8") as raw:
         raw.write(json.dumps(metadata, ensure_ascii=False) + "\n")
         for job_index, (kind, mode, threads, repeat) in enumerate(jobs):
-            iterations = args.diagnostic_iterations if kind == "diagnostic" else args.iterations
+            diagnostic = kind.endswith("diagnostic")
+            iterations = args.diagnostic_iterations if diagnostic else args.iterations
             command = [str(binaries[kind]), str(repo), "--mode", mode, "--threads", str(threads),
                        "--iterations", str(iterations), "--corpus", args.corpus, "--api", args.api]
             print(f"[{job_index + 1}/{len(jobs)}] {kind} {mode} threads={threads} repeat={repeat + 1}",
@@ -176,9 +194,10 @@ def main():
                     rows[0].get("hmm_dense_emissions") != expected_hmm):
                 raise RuntimeError(f"requested {mode}, got unexpected HMM backend: {rows[0]}")
             for row in rows:
-                if row["diagnostic"] != (kind == "diagnostic"):
+                if row["diagnostic"] != diagnostic:
                     raise RuntimeError("performance/diagnostic executable mismatch")
-                row.update(variant="original-A" if kind == "original" else mode, repeat=repeat,
+                variant = "original-A" if kind == "original" else "previous-" + mode if kind.startswith("previous") else mode
+                row.update(variant=variant, repeat=repeat,
                            process_seconds=process_seconds, process_index=job_index)
                 if row["kind"] == "warm":
                     key = (row["corpus"], row["api"], row["requests"], row["threads"])

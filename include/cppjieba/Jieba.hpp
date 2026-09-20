@@ -85,7 +85,7 @@ class Jieba {
     return dict_trie_.DeleteUserWord(word, tag);
   }
   
-  bool Find(const string& word)
+  bool Find(const string& word) const
   {
     return dict_trie_.Find(word);
   }

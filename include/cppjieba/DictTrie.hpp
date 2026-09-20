@@ -8,7 +8,6 @@
 #include <cmath>
 #include <chrono>
 #include <stdexcept>
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -18,7 +17,7 @@
 #include "Utils.hpp"
 #include "UnicodeFile.hpp"
 #include "Unicode.hpp"
-#include "Trie.hpp"
+#include "DictTypes.hpp"
 #include "CpuCutOptions.hpp"
 
 namespace cppjieba {
@@ -35,7 +34,7 @@ class DictTrie {
 
   DictTrie(const std::string& dict_path, const std::string& user_dict_paths = "", UserWordWeightOption user_word_weight_opt = WordWeightMedian,
            const CpuCutOptions& options = CpuCutOptions())
-      : trie_(NULL), options_(options), initialized_(false), actual_max_word_len_(0),
+      : options_(options), initialized_(false), actual_max_word_len_(0),
         load_ms_(0.0) {
     const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     Init(dict_path, user_dict_paths, user_word_weight_opt);
@@ -44,70 +43,71 @@ class DictTrie {
     initialized_ = true;
   }
 
-  ~DictTrie() {
-    delete trie_;
+  // Runtime dictionary edits are unsupported. Load all user words at startup.
+  bool InsertUserWord(const std::string&, const std::string& = UNKNOWN_TAG) {
+    return false;
+  }
+  bool InsertUserWord(const std::string&, int, const std::string& = UNKNOWN_TAG) {
+    return false;
+  }
+  bool DeleteUserWord(const std::string&, const std::string& = UNKNOWN_TAG) {
+    return false;
   }
 
-  bool InsertUserWord(const std::string& word, const std::string& tag = UNKNOWN_TAG) {
-    if (IsDictionaryFrozen()) return false;
-    DictUnit node_info;
-    if (!MakeNodeInfo(node_info, word, user_word_default_weight_, tag)) {
-      return false;
+  const DictUnit* Find(RuneStrArray::const_iterator begin,
+                       RuneStrArray::const_iterator end) const {
+    if (begin == end) return NULL;
+    DatCursor cursor = dat_model_->Root();
+    for (; begin != end; ++begin) {
+      if (!dat_model_->StepRaw(begin->rune, cursor)) return NULL;
     }
-    active_node_infos_.push_back(node_info);
-    trie_->InsertNode(node_info.word, &active_node_infos_.back());
-    return true;
+    return dat_model_->IsTerminal(cursor) ? TerminalValue(cursor) : NULL;
   }
 
-  bool InsertUserWord(const std::string& word,int freq, const std::string& tag = UNKNOWN_TAG) {
-    if (IsDictionaryFrozen()) return false;
-    DictUnit node_info;
-    double weight = freq ? log(1.0 * freq / freq_sum_) : user_word_default_weight_ ;
-    if (!MakeNodeInfo(node_info, word, weight , tag)) {
-      return false;
+  bool Contains(RuneStrArray::const_iterator begin,
+                RuneStrArray::const_iterator end) const {
+    if (begin == end) return false;
+    DatCursor cursor = dat_model_->Root();
+    for (; begin != end; ++begin) {
+      if (!dat_model_->StepRaw(begin->rune, cursor)) return false;
     }
-    active_node_infos_.push_back(node_info);
-    trie_->InsertNode(node_info.word, &active_node_infos_.back());
-    return true;
+    return dat_model_->IsTerminal(cursor);
   }
 
-  bool DeleteUserWord(const std::string& word, const std::string& tag = UNKNOWN_TAG) {
-    if (IsDictionaryFrozen()) return false;
-    DictUnit node_info;
-    if (!MakeNodeInfo(node_info, word, user_word_default_weight_, tag)) {
-      return false;
-    }
-    trie_->DeleteNode(node_info.word, &node_info);
-    return true;
-  }
-
-  const DictUnit* Find(RuneStrArray::const_iterator begin, RuneStrArray::const_iterator end) const {
-    return trie_->Find(begin, end);
-  }
-
-  void Find(RuneStrArray::const_iterator begin,
-        RuneStrArray::const_iterator end,
-        std::vector<struct Dag>&res,
-        size_t max_word_len = MAX_WORD_LENGTH) const {
-    trie_->Find(begin, end, res, max_word_len);
-  }
-
-  bool Find(const std::string& word)
-  {
-    const DictUnit *tmp = NULL;
+  bool Contains(const std::string& word) const {
     RuneStrArray runes;
-    if (!DecodeUTF8RunesInString(word, runes))
-    {
+    if (!DecodeUTF8RunesInString(word, runes)) {
       XLOG(ERROR) << "Decode failed.";
-    }
-    tmp = Find(runes.begin(), runes.end());
-    if (tmp == NULL)
-    {
       return false;
     }
-    else
-    {
-      return true;
+    return Contains(runes.begin(), runes.end());
+  }
+  bool Find(const std::string& word) const { return Contains(word); }
+
+  // Compatibility enumeration for FullSegment and external DAG readers.
+  // Always produce the length-one fallback, including requested max length 0.
+  void Find(RuneStrArray::const_iterator begin,
+            RuneStrArray::const_iterator end, std::vector<Dag>& res,
+            size_t max_word_len = MAX_WORD_LENGTH) const {
+    assert(end >= begin);
+    const size_t n = static_cast<size_t>(end - begin);
+    res.clear();
+    res.resize(n);
+    const size_t limit = std::max(size_t(1),
+        std::min(actual_max_word_len_, max_word_len));
+    for (size_t i = 0; i < n; ++i) {
+      res[i].runestr = begin[i];
+      DatCursor cursor = dat_model_->Root();
+      const size_t stop = std::min(limit, n - i);
+      for (size_t len = 1; len <= stop; ++len) {
+        const bool alive = dat_model_->StepRaw(begin[i + len - 1].rune, cursor);
+        const bool terminal = alive && dat_model_->IsTerminal(cursor);
+        if (len == 1 || terminal) {
+          res[i].nexts.push_back(std::make_pair(i + len - 1,
+              terminal ? TerminalValue(cursor) : static_cast<const DictUnit*>(NULL)));
+        }
+        if (!alive) break;
+      }
     }
   }
 
@@ -181,20 +181,24 @@ class DictTrie {
 
 
   bool IsDictionaryFrozen() const {
-    return initialized_ && options_.mode != CpuCutMode::LegacyDag;
+    return initialized_;
   }
   CpuCutMode GetRequestedCpuCutMode() const { return options_.mode; }
-  CpuCutMode GetCpuCutMode() const {
-    return options_.mode == CpuCutMode::DatRawFused && !dat_model_
-        ? CpuCutMode::LegacyDag : options_.mode;
-  }
+  CpuCutMode GetCpuCutMode() const { return CpuCutMode::DatRawFused; }
   const DatModel* GetDatModel() const { return dat_model_.get(); }
   const DatBuildStats& GetDatBuildStats() const { return dat_stats_; }
   size_t GetActualMaxWordLen() const { return actual_max_word_len_; }
   double GetLoadMilliseconds() const { return load_ms_; }
-  const Trie& GetTrie() const { return *trie_; }
 
  private:
+  const DictUnit* TerminalValue(const DatCursor& cursor) const {
+    const size_t index = dat_model_->TerminalSourceIndex(cursor);
+    const size_t base_size = base_static_node_infos_->size();
+    if (index < base_size) return &(*base_static_node_infos_)[index];
+    assert(index - base_size < static_node_infos_.size());
+    return &static_node_infos_[index - base_size];
+  }
+
   void CheckMutable() const {
     if (IsDictionaryFrozen()) throw std::logic_error("cppjieba dictionary is frozen");
   }
@@ -229,37 +233,23 @@ class DictTrie {
       LoadUserDict(user_dict_paths);
     }
     Shrink(static_node_infos_);
-    CreateTrie();
+    CreateDat();
   }
 
-  void CreateTrie() {
+  void CreateDat() {
     const size_t total_size = base_static_node_infos_->size() + static_node_infos_.size();
     assert(total_size);
-    std::vector<Unicode> words;
-    std::vector<const DictUnit*> valuePointers;
-    words.reserve(total_size);
-    valuePointers.reserve(total_size);
-
-    for (size_t i = 0; i < base_static_node_infos_->size(); i++) {
-      words.push_back((*base_static_node_infos_)[i].word);
-      valuePointers.push_back(&(*base_static_node_infos_)[i]);
-    }
-    for (size_t i = 0; i < static_node_infos_.size(); i++) {
-      words.push_back(static_node_infos_[i].word);
-      valuePointers.push_back(&static_node_infos_[i]);
-    }
-
-    std::unique_ptr<Trie> trie(new Trie(words, valuePointers));
-    std::vector<Unicode>().swap(words);
-    for (size_t i = 0; i < valuePointers.size(); ++i) {
-      actual_max_word_len_ = std::max(actual_max_word_len_, valuePointers[i]->word.size());
-    }
-    if (options_.mode == CpuCutMode::DatRawFused) {
-      DatBuildResult result = DatBuilder::Build(valuePointers, min_weight_, options_.dat_build_options);
-      dat_model_ = std::move(result.model);
-      dat_stats_ = std::move(result.stats);
-    }
-    trie_ = trie.release();
+    std::vector<const DictUnit*> values;
+    values.reserve(total_size);
+    for (size_t i = 0; i < base_static_node_infos_->size(); ++i)
+      values.push_back(&(*base_static_node_infos_)[i]);
+    for (size_t i = 0; i < static_node_infos_.size(); ++i)
+      values.push_back(&static_node_infos_[i]);
+    DatBuildResult result = DatBuilder::Build(values, min_weight_, options_.dat_build_options);
+    if (!result.model) throw DatBuildError(result.stats);
+    actual_max_word_len_ = result.model->ActualMaxWordLen();
+    dat_model_ = std::move(result.model);
+    dat_stats_ = std::move(result.stats);
   }
 
   bool MakeNodeInfo(DictUnit& node_info,
@@ -347,8 +337,6 @@ class DictTrie {
 
   std::shared_ptr<const std::vector<DictUnit> > base_static_node_infos_;
   std::vector<DictUnit> static_node_infos_;
-  std::deque<DictUnit> active_node_infos_; // must not be std::vector
-  Trie * trie_;
   CpuCutOptions options_;
   bool initialized_;
   size_t actual_max_word_len_;

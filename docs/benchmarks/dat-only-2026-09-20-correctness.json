@@ -1,0 +1,431 @@
+{
+  "previous_binary": "/tmp/cppjieba-dat-previous-oracle-agent",
+  "current_binary": "/tmp/cppjieba-dat-only-oracle-agent",
+  "binary_sha256": {
+    "previous": "a42a0471128a936676c02d724526a2688a3e08cad12bbb019fab9b5718a89661",
+    "current": "10ed16f437247f320fa49bf8b89ecdf89349658b7cb1e293424068d3ce97a05f"
+  },
+  "oracle_source_sha256": "f891c7df8f10952fa53400ec8202f19c6bc697390e72b150767862bc7a763c18",
+  "comparison": "complete byte-for-byte transcript comparison from independent processes",
+  "scenarios": [
+    {
+      "name": "normal",
+      "text_count": 409,
+      "find_probes": 348984,
+      "input_sha256": "cfc8386246c1be46526e941a3492dbd78bd583c0b4a31975405236845be2d0b2",
+      "variants": [
+        {
+          "name": "previous-A",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "A"
+          ],
+          "output_bytes": 47023726,
+          "output_sha256": "c6e2ba4158d3403ab3248497e9b521f6caca71f79c5616a2ade8d0762b97624f",
+          "exact_match": true
+        },
+        {
+          "name": "previous-C",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C"
+          ],
+          "output_bytes": 47023726,
+          "output_sha256": "c6e2ba4158d3403ab3248497e9b521f6caca71f79c5616a2ade8d0762b97624f",
+          "exact_match": true
+        },
+        {
+          "name": "previous-D",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D"
+          ],
+          "output_bytes": 47023726,
+          "output_sha256": "c6e2ba4158d3403ab3248497e9b521f6caca71f79c5616a2ade8d0762b97624f",
+          "exact_match": true
+        },
+        {
+          "name": "current-C",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C"
+          ],
+          "output_bytes": 47023726,
+          "output_sha256": "c6e2ba4158d3403ab3248497e9b521f6caca71f79c5616a2ade8d0762b97624f",
+          "exact_match": true
+        },
+        {
+          "name": "current-D",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D"
+          ],
+          "output_bytes": 47023726,
+          "output_sha256": "c6e2ba4158d3403ab3248497e9b521f6caca71f79c5616a2ade8d0762b97624f",
+          "exact_match": true
+        },
+        {
+          "name": "current-D-sparse",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--hmm-budget",
+            "1"
+          ],
+          "output_bytes": 47023726,
+          "output_sha256": "c6e2ba4158d3403ab3248497e9b521f6caca71f79c5616a2ade8d0762b97624f",
+          "exact_match": true
+        }
+      ]
+    },
+    {
+      "name": "startup",
+      "text_count": 7,
+      "find_probes": 6,
+      "input_sha256": "ce1377b72b72727ebb4e3efcf758c232886d442a48000fb34f56107d188aa7d3",
+      "variants": [
+        {
+          "name": "previous-A",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "A",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user"
+          ],
+          "output_bytes": 581399,
+          "output_sha256": "676c68cd363f4aae77a688c0c3c02a0bb2db51ea453fe2d3778a8a2a687ca3a2",
+          "exact_match": true
+        },
+        {
+          "name": "previous-C",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user"
+          ],
+          "output_bytes": 581399,
+          "output_sha256": "676c68cd363f4aae77a688c0c3c02a0bb2db51ea453fe2d3778a8a2a687ca3a2",
+          "exact_match": true
+        },
+        {
+          "name": "previous-D",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user"
+          ],
+          "output_bytes": 581399,
+          "output_sha256": "676c68cd363f4aae77a688c0c3c02a0bb2db51ea453fe2d3778a8a2a687ca3a2",
+          "exact_match": true
+        },
+        {
+          "name": "current-C",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user"
+          ],
+          "output_bytes": 581399,
+          "output_sha256": "676c68cd363f4aae77a688c0c3c02a0bb2db51ea453fe2d3778a8a2a687ca3a2",
+          "exact_match": true
+        },
+        {
+          "name": "current-D",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user"
+          ],
+          "output_bytes": 581399,
+          "output_sha256": "676c68cd363f4aae77a688c0c3c02a0bb2db51ea453fe2d3778a8a2a687ca3a2",
+          "exact_match": true
+        },
+        {
+          "name": "current-D-sparse",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--hmm-budget",
+            "1"
+          ],
+          "output_bytes": 581399,
+          "output_sha256": "676c68cd363f4aae77a688c0c3c02a0bb2db51ea453fe2d3778a8a2a687ca3a2",
+          "exact_match": true
+        }
+      ]
+    },
+    {
+      "name": "separators",
+      "text_count": 7,
+      "find_probes": 6,
+      "input_sha256": "ce1377b72b72727ebb4e3efcf758c232886d442a48000fb34f56107d188aa7d3",
+      "variants": [
+        {
+          "name": "previous-A",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "A",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--separators",
+            " ,;\n京甲"
+          ],
+          "output_bytes": 443027,
+          "output_sha256": "4e656195ec64e00a65795bd620c25113c10e7e73afba1139972a5287fb8b76e7",
+          "exact_match": true
+        },
+        {
+          "name": "previous-C",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--separators",
+            " ,;\n京甲"
+          ],
+          "output_bytes": 443027,
+          "output_sha256": "4e656195ec64e00a65795bd620c25113c10e7e73afba1139972a5287fb8b76e7",
+          "exact_match": true
+        },
+        {
+          "name": "previous-D",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--separators",
+            " ,;\n京甲"
+          ],
+          "output_bytes": 443027,
+          "output_sha256": "4e656195ec64e00a65795bd620c25113c10e7e73afba1139972a5287fb8b76e7",
+          "exact_match": true
+        },
+        {
+          "name": "current-C",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--separators",
+            " ,;\n京甲"
+          ],
+          "output_bytes": 443027,
+          "output_sha256": "4e656195ec64e00a65795bd620c25113c10e7e73afba1139972a5287fb8b76e7",
+          "exact_match": true
+        },
+        {
+          "name": "current-D",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--separators",
+            " ,;\n京甲"
+          ],
+          "output_bytes": 443027,
+          "output_sha256": "4e656195ec64e00a65795bd620c25113c10e7e73afba1139972a5287fb8b76e7",
+          "exact_match": true
+        },
+        {
+          "name": "current-D-sparse",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/fixture.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/first.user|/tmp/cppjieba-dat-only-comparison-agent/last.user",
+            "--separators",
+            " ,;\n京甲",
+            "--hmm-budget",
+            "1"
+          ],
+          "output_bytes": 443027,
+          "output_sha256": "4e656195ec64e00a65795bd620c25113c10e7e73afba1139972a5287fb8b76e7",
+          "exact_match": true
+        }
+      ]
+    },
+    {
+      "name": "long",
+      "text_count": 3,
+      "find_probes": 0,
+      "input_sha256": "ef0c6c699701387988a1805268ce908c0d99be099655a8bef0f0300bbb7c375d",
+      "variants": [
+        {
+          "name": "previous-A",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "A",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/long.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/empty.user",
+            "--only-mp"
+          ],
+          "output_bytes": 38823362,
+          "output_sha256": "5dba3f6a5298e35a3567fba806f9f77afc3f068902a3853ae4c0caf0dc389011",
+          "exact_match": true
+        },
+        {
+          "name": "previous-C",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/long.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/empty.user",
+            "--only-mp"
+          ],
+          "output_bytes": 38823362,
+          "output_sha256": "5dba3f6a5298e35a3567fba806f9f77afc3f068902a3853ae4c0caf0dc389011",
+          "exact_match": true
+        },
+        {
+          "name": "previous-D",
+          "command": [
+            "/tmp/cppjieba-dat-previous-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/long.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/empty.user",
+            "--only-mp"
+          ],
+          "output_bytes": 38823362,
+          "output_sha256": "5dba3f6a5298e35a3567fba806f9f77afc3f068902a3853ae4c0caf0dc389011",
+          "exact_match": true
+        },
+        {
+          "name": "current-C",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "C",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/long.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/empty.user",
+            "--only-mp"
+          ],
+          "output_bytes": 38823362,
+          "output_sha256": "5dba3f6a5298e35a3567fba806f9f77afc3f068902a3853ae4c0caf0dc389011",
+          "exact_match": true
+        },
+        {
+          "name": "current-D",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/long.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/empty.user",
+            "--only-mp"
+          ],
+          "output_bytes": 38823362,
+          "output_sha256": "5dba3f6a5298e35a3567fba806f9f77afc3f068902a3853ae4c0caf0dc389011",
+          "exact_match": true
+        },
+        {
+          "name": "current-D-sparse",
+          "command": [
+            "/tmp/cppjieba-dat-only-oracle-agent",
+            "/home/lb/cppjieba",
+            "--mode",
+            "D",
+            "--dict",
+            "/tmp/cppjieba-dat-only-comparison-agent/long.dict",
+            "--users",
+            "/tmp/cppjieba-dat-only-comparison-agent/empty.user",
+            "--only-mp",
+            "--hmm-budget",
+            "1"
+          ],
+          "output_bytes": 38823362,
+          "output_sha256": "5dba3f6a5298e35a3567fba806f9f77afc3f068902a3853ae4c0caf0dc389011",
+          "exact_match": true
+        }
+      ]
+    }
+  ],
+  "passed": true
+}

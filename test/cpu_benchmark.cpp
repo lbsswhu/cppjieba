@@ -1,5 +1,5 @@
-// A/B/C/D benchmark. Compile this same source with CPPJIEBA_CPU_BASELINE against
-// the original headers for an independent original-A measurement.
+// DAT-only C/D benchmark. Compile this same source with CPPJIEBA_CPU_PREVIOUS
+// against 8b8a3f7 for A/B/C/D, or CPPJIEBA_CPU_BASELINE against original headers.
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -163,7 +163,13 @@ struct Config {
   size_t threads, iterations;
   size_t dat_max_slots, dat_max_temporary_bytes, hmm_dense_budget_bytes;
   double dat_max_build_ms;
-  Config() : repo("."), mode("A"), corpus("all"), api("all"), threads(1), iterations(200),
+  Config() : repo("."),
+#if defined(CPPJIEBA_CPU_BASELINE) || defined(CPPJIEBA_CPU_PREVIOUS)
+      mode("A"),
+#else
+      mode("C"),
+#endif
+      corpus("all"), api("all"), threads(1), iterations(200),
       dat_max_slots(std::numeric_limits<size_t>::max()),
       dat_max_temporary_bytes(std::numeric_limits<size_t>::max()),
       hmm_dense_budget_bytes(std::numeric_limits<size_t>::max()), dat_max_build_ms(-1) {}
@@ -196,6 +202,10 @@ Config Parse(int argc, char** argv) {
       c.hmm_dense_budget_bytes != std::numeric_limits<size_t>::max() || c.dat_max_build_ms >= 0)
     throw std::runtime_error("Original baseline does not support optimization budgets");
 #endif
+#if !defined(CPPJIEBA_CPU_BASELINE) && !defined(CPPJIEBA_CPU_PREVIOUS)
+  if (c.mode != "C" && c.mode != "D")
+    throw std::runtime_error("DAT-only build supports modes C and D; use a previous-build binary for A/B");
+#endif
   return c;
 }
 
@@ -211,7 +221,7 @@ struct Corpus {
   std::vector<Input> inputs;
 };
 std::vector<Corpus> Corpora(const std::string& repo) {
-  std::vector<Corpus> result(4);
+  std::vector<Corpus> result(5);
   result[0].name = "short";
   const char* short_texts[] = {"小明在南京市长江大桥", "北京大学生物系主任", "自然语言处理和搜索引擎",
     "今天下午三点开会", "研究生命起源", "OpenAI与中文123.45测试", "龘靐齉𠀀未知词", "中华人民共和国万岁"};
@@ -231,12 +241,23 @@ std::vector<Corpus> Corpora(const std::string& repo) {
   result[2].inputs.push_back(Input(long_range));
   result[3].name = "full_document";
   result[3].inputs.push_back(Input(doc));
+  result[4].name = "lookup";
+  std::ifstream dictionary((repo + "/dict/jieba.dict.utf8").c_str());
+  std::string line;
+  size_t line_number = 0;
+  while (result[4].inputs.size() < 128 && std::getline(dictionary, line)) {
+    if (line_number++ % 997 != 0) continue;
+    const std::string word = line.substr(0, line.find(' '));
+    result[4].inputs.push_back(Input(word));
+    if (line_number % 4 == 1) result[4].inputs.push_back(Input(word + "𠀀"));
+  }
+  if (result[4].inputs.empty()) throw std::runtime_error("Empty lookup corpus");
   return result;
 }
 
 struct Counts {
-  size_t transitions, candidates, fused_ranges, legacy_ranges;
-  Counts() : transitions(0), candidates(0), fused_ranges(0), legacy_ranges(0) {}
+  size_t transitions, candidates, fused_ranges, legacy_ranges, wide_ranges;
+  Counts() : transitions(0), candidates(0), fused_ranges(0), legacy_ranges(0), wide_ranges(0) {}
 };
 size_t Request(const Jieba& jieba, const MPSegment& mp, const std::string& api,
                const Input& input, Counts* counts) {
@@ -247,7 +268,12 @@ size_t Request(const Jieba& jieba, const MPSegment& mp, const std::string& api,
     mp.CutWithScratch(input.runes.begin(), input.runes.end(), output, scratch);
     if (counts) {
       counts->transitions += scratch.transitions; counts->candidates += scratch.candidates;
-      counts->fused_ranges += scratch.fused_ranges; counts->legacy_ranges += scratch.legacy_ranges;
+      counts->fused_ranges += scratch.fused_ranges;
+#ifdef CPPJIEBA_CPU_PREVIOUS
+      counts->legacy_ranges += scratch.legacy_ranges;
+#else
+      counts->wide_ranges += scratch.wide_ranges;
+#endif
     }
 #else
     (void)counts;
@@ -255,6 +281,8 @@ size_t Request(const Jieba& jieba, const MPSegment& mp, const std::string& api,
 #endif
     return output.size();
   }
+  if (api == "find")
+    return jieba.GetDictTrie()->Find(input.runes.begin(), input.runes.end()) != NULL;
   if (api == "keywords") {
     std::vector<KeywordExtractor::Word> output;
     jieba.extractor.Extract(input.text, output, 20);
@@ -265,6 +293,7 @@ size_t Request(const Jieba& jieba, const MPSegment& mp, const std::string& api,
   else if (api == "search") jieba.CutForSearch(input.text, output);
   else if (api == "small") jieba.CutSmall(input.text, output, 3);
   else if (api == "hmm") jieba.CutHMM(input.text, output);
+  else if (api == "full") jieba.CutAll(input.text, output);
   else throw std::runtime_error("Unknown API: " + api);
   return output.size();
 }
@@ -283,7 +312,7 @@ struct Worker {
 void Measure(const Config& c, const Jieba& jieba, const Corpus& corpus, const std::string& api) {
   const MPSegment mp(jieba.GetDictTrie());
   const size_t requests = corpus.name == "full_document" ? std::max(size_t(1), c.iterations / 20) :
-      c.iterations * (corpus.name == "short" ? 20 : 1);
+      c.iterations * ((corpus.name == "short" || corpus.name == "lookup") ? 20 : 1);
   for (size_t i = 0; i < corpus.inputs.size(); ++i) Request(jieba, mp, api, corpus.inputs[i], NULL);
   std::vector<Worker> results(c.threads);
   std::vector<std::thread> threads;
@@ -327,6 +356,7 @@ void Measure(const Config& c, const Jieba& jieba, const Corpus& corpus, const st
     total.peak_live_bytes = std::max(total.peak_live_bytes, w.peak_live_bytes);
     total.counts.transitions += w.counts.transitions; total.counts.candidates += w.counts.candidates;
     total.counts.fused_ranges += w.counts.fused_ranges; total.counts.legacy_ranges += w.counts.legacy_ranges;
+    total.counts.wide_ranges += w.counts.wide_ranges;
     total.latency.insert(total.latency.end(), w.latency.begin(), w.latency.end());
   }
   std::sort(total.latency.begin(), total.latency.end());
@@ -335,13 +365,15 @@ void Measure(const Config& c, const Jieba& jieba, const Corpus& corpus, const st
             << ",\"threads\":" << c.threads << ",\"requests\":" << requests
             << ",\"input_bytes\":" << total.bytes << ",\"input_runes\":" << total.runes
             << ",\"output_tokens\":" << total.tokens;
+  if (api == "find") std::cout << ",\"query_hits\":" << total.tokens;
 #ifdef CPPJIEBA_CPU_DIAGNOSTICS
   std::cout << ",\"diagnostic\":true,\"allocations_per_request\":" << double(total.allocations) / requests
             << ",\"allocated_bytes_per_request\":" << double(total.allocated_bytes) / requests
             << ",\"max_request_live_allocation_bytes\":" << total.peak_live_bytes;
   if (api == "mp")
     std::cout << ",\"transitions\":" << total.counts.transitions << ",\"candidates\":" << total.counts.candidates
-              << ",\"fused_ranges\":" << total.counts.fused_ranges << ",\"legacy_ranges\":" << total.counts.legacy_ranges;
+              << ",\"fused_ranges\":" << total.counts.fused_ranges << ",\"legacy_ranges\":" << total.counts.legacy_ranges
+              << ",\"wide_ranges\":" << total.counts.wide_ranges;
 #else
   std::cout << ",\"diagnostic\":false,\"elapsed_seconds\":" << seconds
             << ",\"bytes_per_second\":" << total.bytes / seconds << ",\"runes_per_second\":" << total.runes / seconds
@@ -366,8 +398,12 @@ int main(int argc, char** argv) {
                 dict + "idf.utf8", dict + "stop_words.utf8");
 #else
     CpuCutOptions options;
+#ifdef CPPJIEBA_CPU_PREVIOUS
     options.mode = c.mode == "A" ? CpuCutMode::LegacyDag :
         c.mode == "B" ? CpuCutMode::PointerFused : CpuCutMode::DatRawFused;
+#else
+    options.mode = CpuCutMode::DatRawFused;
+#endif
     options.optimize_hmm = c.mode == "D";
     if (c.dat_max_slots != std::numeric_limits<size_t>::max())
       options.dat_build_options.max_slots = c.dat_max_slots;
@@ -398,8 +434,12 @@ int main(int argc, char** argv) {
 #else
     const DictTrie* trie = jieba.GetDictTrie();
     const DatBuildStats& stats = trie->GetDatBuildStats();
+#ifdef CPPJIEBA_CPU_PREVIOUS
     const char* backend = trie->GetCpuCutMode() == CpuCutMode::LegacyDag ? "LegacyDag" :
         trie->GetCpuCutMode() == CpuCutMode::PointerFused ? "PointerFused" : "DatRawFused";
+#else
+    const char* backend = "DatRawFused";
+#endif
     std::cout << ",\"original_baseline\":false,\"actual_backend\":" << Quote(backend)
               << ",\"dictionary_load_ms\":" << trie->GetLoadMilliseconds()
               << ",\"dat_build_ms\":" << stats.build_ms << ",\"dat_layout_ms\":" << stats.layout_ms
@@ -414,16 +454,28 @@ int main(int argc, char** argv) {
               << ",\"hmm_optimization_enabled\":" << (jieba.GetHMMModel()->IsOptimizationEnabled() ? "true" : "false")
               << ",\"hmm_dense_emissions\":" << (jieba.GetHMMModel()->HasDenseEmissions() ? "true" : "false")
               << ",\"hmm_dense_emission_bytes\":" << jieba.GetHMMModel()->GetDenseEmissionBytes();
+#ifndef CPPJIEBA_CPU_PREVIOUS
+    std::cout << ",\"dat_topology_bytes\":" << stats.topology_bytes
+              << ",\"dat_source_index_bytes\":" << stats.source_index_bytes
+              << ",\"dat_weight_bytes\":" << stats.weight_bytes;
+#endif
+#endif
+#if defined(CPPJIEBA_CPU_BASELINE) || defined(CPPJIEBA_CPU_PREVIOUS)
+    std::cout << ",\"pointer_trie_present\":true";
+#else
+    std::cout << ",\"pointer_trie_present\":false";
 #endif
     std::cout << "}\n";
     const std::vector<Corpus> corpora = Corpora(c.repo);
-    const char* apis[] = {"mp", "cut", "search", "small", "keywords", "hmm"};
+    const char* apis[] = {"mp", "cut", "search", "small", "keywords", "hmm", "full", "find"};
     bool matched = false;
     for (size_t i = 0; i < corpora.size(); ++i) {
       if (c.corpus == "all" && corpora[i].name == "full_document") continue;
       if (c.corpus != "all" && c.corpus != corpora[i].name) continue;
       for (size_t a = 0; a < sizeof(apis) / sizeof(apis[0]); ++a) {
         if (c.api != "all" && c.api != apis[a]) continue;
+        if (corpora[i].name == "lookup" && std::string(apis[a]) != "find") continue;
+        if (c.corpus == "all" && std::string(apis[a]) == "find" && corpora[i].name != "lookup") continue;
         Measure(c, jieba, corpora[i], apis[a]); matched = true;
       }
     }

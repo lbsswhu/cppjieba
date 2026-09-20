@@ -2,10 +2,11 @@
 #define CPPJIEBA_DAT_BUILDER_HPP
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include "DatModel.hpp"
-#include "Trie.hpp"
+#include "DictTypes.hpp"
 
 namespace cppjieba {
 
@@ -32,11 +33,25 @@ struct DatBuildStats {
   size_t slot_count;
   size_t logical_nodes;
   size_t unique_weights;
+  size_t topology_bytes;
+  size_t source_index_bytes;
+  size_t weight_bytes;
   size_t model_bytes;
   DatBuildStats()
       : status(DatBuildStatus::Unsupported), build_ms(0), layout_ms(0),
         validation_ms(0), slot_count(0), logical_nodes(0), unique_weights(0),
-        model_bytes(0) {}
+        topology_bytes(0), source_index_bytes(0), weight_bytes(0), model_bytes(0) {}
+};
+
+class DatBuildError : public std::runtime_error {
+ public:
+  explicit DatBuildError(const DatBuildStats& stats)
+      : std::runtime_error(stats.reason.empty() ? "cppjieba DAT build failed" : stats.reason),
+        stats_(stats) {}
+  const DatBuildStats& GetStats() const { return stats_; }
+
+ private:
+  DatBuildStats stats_;
 };
 
 struct DatBuildResult {

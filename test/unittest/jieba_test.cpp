@@ -124,44 +124,44 @@ TEST(JiebaTest, WordTest) {
   ASSERT_EQ("[{\"word\": \"\xE4\xBB\x96\", \"offset\": 0}, {\"word\": \"\xE6\x9D\xA5\xE5\x88\xB0\", \"offset\": 3}, {\"word\": \"\xE4\xBA\x86\", \"offset\": 9}, {\"word\": \"\xE7\xBD\x91\xE6\x98\x93\", \"offset\": 12}, {\"word\": \"\xE6\x9D\xAD\xE7\xA0\x94\", \"offset\": 18}, {\"word\": \"\xE5\xA4\xA7\xE5\x8E\xA6\", \"offset\": 24}]", result);
 }
 
-TEST(JiebaTest, InsertUserWord) {
+TEST(JiebaTest, RuntimeDictionaryWritesAreRejected) {
   cppjieba::Jieba jieba(DICT_DIR "/jieba.dict.utf8",
                         DICT_DIR "/hmm_model.utf8",
                         DICT_DIR "/user.dict.utf8",
                         DICT_DIR "/idf.utf8",
                         DICT_DIR "/stop_words.utf8");
+  ASSERT_TRUE(jieba.GetDictTrie()->IsDictionaryFrozen());
+  vector<string> before, after;
+  jieba.Cut("男默女泪南京市长江大桥", before);
+  ASSERT_FALSE(jieba.InsertUserWord("男默女泪"));
+  ASSERT_FALSE(jieba.InsertUserWord("男默女泪", 1000000, "n"));
+  ASSERT_FALSE(jieba.DeleteUserWord("南京市"));
+  ASSERT_FALSE(jieba.Find("男默女泪"));
+  ASSERT_TRUE(jieba.Find("南京市"));
+  EXPECT_THROW(jieba.LoadUserDict(vector<string>(1, "男默女泪")), std::logic_error);
+  EXPECT_THROW(jieba.LoadUserDict(set<string>{"男默女泪"}), std::logic_error);
+  EXPECT_THROW(jieba.LoadUserDict(DICT_DIR "/user.dict.utf8"), std::logic_error);
+  jieba.Cut("男默女泪南京市长江大桥", after);
+  EXPECT_EQ(before, after);
+}
+
+TEST(JiebaTest, StartupUserWordsAndSeparators) {
+  cppjieba::Jieba jieba(DICT_DIR "/jieba.dict.utf8",
+                        DICT_DIR "/hmm_model.utf8",
+                        DICT_DIR "/user.dict.utf8|" TEST_DATA_DIR "/frozen.user.dict.utf8",
+                        DICT_DIR "/idf.utf8",
+                        DICT_DIR "/stop_words.utf8");
   vector<string> words;
   string result;
-
+  ASSERT_TRUE(jieba.Find("男默女泪"));
   jieba.Cut("男默女泪", words);
-  result << words;
-  ASSERT_EQ("[\"男默\", \"女泪\"]", result);
-
-  ASSERT_TRUE(jieba.InsertUserWord("男默女泪"));
-
-  jieba.Cut("男默女泪", words);
-  result << words;
-  ASSERT_EQ("[\"男默女泪\"]", result);
-
-  for (size_t i = 0; i < 100; i++) {
-    string newWord;
-    newWord << rand();
-    ASSERT_TRUE(jieba.InsertUserWord(newWord));
-    jieba.Cut(newWord, words);
-    result << words;
-    ASSERT_EQ(result, StringFormat("[\"%s\"]", newWord.c_str()));
-  }
-
-  ASSERT_TRUE(jieba.InsertUserWord("同一个世界，同一个梦想"));
+  EXPECT_EQ(vector<string>(1, "男默女泪"), words);
   jieba.Cut("同一个世界，同一个梦想", words);
   result = Join(words.begin(), words.end(), "/");
   ASSERT_EQ(result, "同一个/世界/，/同一个/梦想");
-
   jieba.ResetSeparators("");
-
   jieba.Cut("同一个世界，同一个梦想", words);
-  result = Join(words.begin(), words.end(), "/");
-  ASSERT_EQ(result, "同一个世界，同一个梦想");
+  EXPECT_EQ(vector<string>(1, "同一个世界，同一个梦想"), words);
 
   {
     string s("一部iPhone6");

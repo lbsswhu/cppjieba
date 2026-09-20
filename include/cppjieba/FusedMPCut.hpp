@@ -8,31 +8,11 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
-#include "Trie.hpp"
+#include "DictTypes.hpp"
 #include "DatModel.hpp"
 #include "MPCutScratch.hpp"
 
 namespace cppjieba {
-
-class PointerWalker {
- public:
-  PointerWalker(const Trie& trie, RuneStrArray::const_iterator begin)
-      : root_(trie.root_), node_(trie.root_), begin_(begin) {}
-  void Reset() { node_ = root_; }
-  bool Step(size_t offset) {
-    if (!node_->next) return false;
-    TrieNode::NextMap::const_iterator it = node_->next->find(begin_[offset].rune);
-    if (it == node_->next->end()) return false;
-    node_ = it->second;
-    return true;
-  }
-  bool IsTerminal() const { return node_->ptValue != NULL; }
-  double TerminalWeight() const { return node_->ptValue->weight; }
- private:
-  const TrieNode* root_;
-  const TrieNode* node_;
-  RuneStrArray::const_iterator begin_;
-};
 
 class RawDatWalker {
  public:
@@ -49,16 +29,16 @@ class RawDatWalker {
 };
 
 // Each call owns scratch; no model writes, virtual calls or candidate containers.
-template<class Walker>
-void CutRangeFused(RuneStrArray::const_iterator begin, size_t n, size_t limit,
+template<class Walker, class Length>
+void CutRangeFusedImpl(RuneStrArray::const_iterator begin, size_t n, size_t limit,
                    double unknownWeight, Walker& walker, MPCutScratch& scratch,
-                   std::vector<WordRange>& out) {
+                   std::vector<WordRange>& out, std::vector<Length>& bestLen) {
   if (!n) return;
-  assert(limit >= 1 && limit <= n && limit <= UINT16_MAX);
+  assert(limit >= 1 && limit <= n && limit <= std::numeric_limits<Length>::max());
   if (n > out.max_size() - out.size()) throw std::length_error("too many words");
   const size_t ringSize = limit + 1;
   scratch.dpRing.resize(ringSize);
-  scratch.bestLen.resize(n);
+  bestLen.resize(n);
   out.reserve(out.size() + n);
   scratch.dpRing[n % ringSize] = 0.0;
 #ifdef CPPJIEBA_CPU_DIAGNOSTICS
@@ -66,7 +46,7 @@ void CutRangeFused(RuneStrArray::const_iterator begin, size_t n, size_t limit,
 #endif
   for (size_t i = n; i-- > 0;) {
     double best = MIN_DOUBLE;
-    uint16_t chosen = 1;
+    Length chosen = 1;
     size_t futureSlot = (i + 1) % ringSize;
     const size_t stop = std::min(limit, n - i);
     walker.Reset();
@@ -85,20 +65,37 @@ void CutRangeFused(RuneStrArray::const_iterator begin, size_t n, size_t limit,
         score += terminal ? walker.TerminalWeight() : unknownWeight;
         if (score > best) {
           best = score;
-          chosen = static_cast<uint16_t>(len);
+          chosen = static_cast<Length>(len);
         }
       }
       if (!alive) break;
       if (++futureSlot == ringSize) futureSlot = 0;
     }
     scratch.dpRing[i % ringSize] = best;
-    scratch.bestLen[i] = chosen;
+    bestLen[i] = chosen;
   }
   for (size_t i = 0; i < n;) {
-    const size_t len = scratch.bestLen[i];
+    const size_t len = bestLen[i];
     assert(len >= 1 && len <= n - i);
     out.push_back(WordRange(begin + i, begin + i + len - 1));
     i += len;
+  }
+}
+// Wide recovery is needed only for requests admitting words longer than 65535
+// Runes. It uses the same recurrence and DAT traversal, with no legacy backend.
+template<class Walker>
+void CutRangeFused(RuneStrArray::const_iterator begin, size_t n, size_t limit,
+                   double unknownWeight, Walker& walker, MPCutScratch& scratch,
+                   std::vector<WordRange>& out) {
+  if (limit <= UINT16_MAX) {
+    scratch.bestLenWide.clear();
+    CutRangeFusedImpl(begin, n, limit, unknownWeight, walker, scratch, out, scratch.bestLen);
+  } else {
+    scratch.bestLen.clear();
+#ifdef CPPJIEBA_CPU_DIAGNOSTICS
+    ++scratch.wide_ranges;
+#endif
+    CutRangeFusedImpl(begin, n, limit, unknownWeight, walker, scratch, out, scratch.bestLenWide);
   }
 }
 } // namespace cppjieba

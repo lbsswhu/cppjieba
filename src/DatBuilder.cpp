@@ -53,10 +53,11 @@ class Budget {
   }
 
   void CheckSlots(size_t count) const {
-    // Include the final units, validation marks, and both bitmap allocations
-    // alive during growth. All other arrays have exact, precomputed lengths.
+    // Include the final units, source indices, validation marks, and both bitmap
+    // allocations alive during growth. Other arrays have precomputed lengths.
     const size_t bitmap = CheckedMultiply(CheckedAdd(count, 63) / 64, 16);
-    CheckBytes(CheckedAdd(fixed_bytes_, CheckedAdd(CheckedMultiply(count, 9), bitmap)));
+    const size_t slot_bytes = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(unsigned char);
+    CheckBytes(CheckedAdd(fixed_bytes_, CheckedAdd(CheckedMultiply(count, slot_bytes), bitmap)));
   }
 
  private:
@@ -100,7 +101,9 @@ struct LogicalNode {
   uint32_t first_edge;
   uint32_t edge_count;
   uint32_t weight;
-  LogicalNode() : first_edge(0), edge_count(0), weight(dat_detail::NO_WEIGHT) {}
+  uint32_t source_index;
+  LogicalNode() : first_edge(0), edge_count(0), weight(dat_detail::NO_WEIGHT),
+                  source_index(dat_detail::NO_SOURCE_INDEX) {}
 };
 struct PendingEdge { uint32_t parent, rune, child; };
 struct LogicalEdge { uint32_t rune, child; };
@@ -226,6 +229,10 @@ DatBuildResult DatBuilder::Build(const std::vector<const DictUnit*>& input,
       Fail(DatBuildStatus::Unsupported, "unknown weight is not finite");
     const size_t slot_limit = std::min(options.max_slots, size_t(dat_detail::NO_CHECK));
     if (!slot_limit) Fail(DatBuildStatus::ResourceLimit, "root exceeds slot budget");
+    // UINT32_MAX is reserved for nonterminals, so the final usable original
+    // input index is UINT32_MAX - 1. Check before allocating or narrowing it.
+    if (input.size() > dat_detail::NO_SOURCE_INDEX)
+      Fail(DatBuildStatus::FieldLimit, "input indices exceed 32-bit source range");
 
     budget.Add(input.size(), sizeof(Record));
     std::vector<Record> records(input.size());
@@ -316,6 +323,7 @@ DatBuildResult DatBuilder::Build(const std::vector<const DictUnit*>& input,
       const uint64_t bits = WeightBits(unit.weight);
       nodes[stack[unit.word.size()]].weight = static_cast<uint32_t>(
           std::lower_bound(weight_bits.begin(), weight_bits.end(), bits) - weight_bits.begin());
+      nodes[stack[unit.word.size()]].source_index = static_cast<uint32_t>(records[i].source_index);
       previous = &unit.word;
     }
     Require(next_node == node_count && next_edge == pending.size(), "logical node count mismatch");
@@ -354,12 +362,19 @@ DatBuildResult DatBuilder::Build(const std::vector<const DictUnit*>& input,
     const size_t slots = static_cast<size_t>(*std::max_element(states.begin(), states.end())) + 1;
     Require(slots <= slot_limit, "unplaced logical state");
     result.stats.slot_count = slots;
-    result.stats.model_bytes = slots * sizeof(uint64_t) + weight_bits.size() * sizeof(double);
+    result.stats.topology_bytes = CheckedMultiply(slots, sizeof(uint64_t));
+    result.stats.source_index_bytes = CheckedMultiply(slots, sizeof(uint32_t));
+    result.stats.weight_bytes = CheckedMultiply(weight_bits.size(), sizeof(double));
+    result.stats.model_bytes = CheckedAdd(CheckedAdd(result.stats.topology_bytes,
+        result.stats.source_index_bytes), result.stats.weight_bytes);
     budget.CheckSlots(slots);
     const uint64_t empty = Pack(0, dat_detail::NO_CHECK, dat_detail::NO_WEIGHT);
     model->units_.assign(slots, empty);
-    for (size_t i = 0; i < nodes.size(); ++i)
+    model->terminalSourceIndices_.assign(slots, dat_detail::NO_SOURCE_INDEX);
+    for (size_t i = 0; i < nodes.size(); ++i) {
       model->units_[states[i]] = Pack(bases[i], dat_detail::NO_CHECK, nodes[i].weight);
+      model->terminalSourceIndices_[states[i]] = nodes[i].source_index;
+    }
     for (size_t i = 0; i < pending.size(); ++i) {
       const PendingEdge& edge = pending[i];
       model->units_[states[edge.child]] = Pack(bases[edge.child], states[edge.parent], nodes[edge.child].weight);
@@ -377,6 +392,8 @@ DatBuildResult DatBuilder::Build(const std::vector<const DictUnit*>& input,
       const uint64_t unit = model->units_[state];
       Require(dat_detail::DecodeBase(unit) == bases[i], "base packing mismatch");
       Require(dat_detail::DecodeWeightCode(unit) == nodes[i].weight, "weight packing mismatch");
+      Require(model->terminalSourceIndices_[state] == nodes[i].source_index,
+              "source index mapping mismatch");
       Require(!nodes[i].edge_count || nodes[i].first_edge < edges.size(), "invalid edge range");
       Require(nodes[i].edge_count || bases[i] == 0, "leaf has nonzero base");
     }
@@ -391,11 +408,16 @@ DatBuildResult DatBuilder::Build(const std::vector<const DictUnit*>& input,
     for (size_t i = 0; i < slots; ++i) {
       if ((i & 1023U) == 0) budget.CheckTime();
       const uint64_t unit = model->units_[i];
+      const uint32_t source_index = model->terminalSourceIndices_[i];
+      const uint32_t weight = dat_detail::DecodeWeightCode(unit);
       Require(!(unit >> 56), "nonzero reserved bits");
+      Require(weight == dat_detail::NO_WEIGHT
+                  ? source_index == dat_detail::NO_SOURCE_INDEX
+                  : source_index < input.size(),
+              "invalid terminal source index");
       if (!seen[i]) Require(unit == empty, "invalid empty slot");
       else {
         Require(dat_detail::DecodeCheck(unit) < slots, "invalid check index");
-        const uint32_t weight = dat_detail::DecodeWeightCode(unit);
         Require(weight == dat_detail::NO_WEIGHT || weight < model->uniqueWeights_.size(), "invalid weight index");
       }
     }
@@ -408,6 +430,10 @@ DatBuildResult DatBuilder::Build(const std::vector<const DictUnit*>& input,
         Require(model->StepRaw(word.word[j], cursor), "effective word transition mismatch");
       }
       Require(model->IsTerminal(cursor), "effective word is not terminal");
+      Require(model->TerminalSourceIndex(cursor) == records[i].source_index,
+              "effective word source index differs");
+      Require(input[model->TerminalSourceIndex(cursor)] == records[i].unit,
+              "effective word source payload differs");
       Require(WeightBits(model->TerminalWeight(cursor)) == WeightBits(word.weight), "effective word weight bits differ");
     }
     budget.CheckTime();

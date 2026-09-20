@@ -12,6 +12,7 @@ namespace dat_detail {
 constexpr uint32_t BASE_MASK = (1U << 22) - 1;
 constexpr uint32_t NO_CHECK = (1U << 21) - 1;
 constexpr uint32_t NO_WEIGHT = (1U << 13) - 1;
+constexpr uint32_t NO_SOURCE_INDEX = UINT32_MAX;
 
 inline int32_t DecodeBase(uint64_t unit) {
   const uint32_t raw = static_cast<uint32_t>(unit & BASE_MASK);
@@ -54,6 +55,12 @@ class DatModel {
     assert(IsTerminal(cursor));
     return uniqueWeights_[dat_detail::DecodeWeightCode(cursor.unit)];
   }
+  // Original Build input index; nonterminal cursors return NO_SOURCE_INDEX.
+  // The model owns indices only and does not retain DictUnit pointers.
+  uint32_t TerminalSourceIndex(const DatCursor& cursor) const {
+    assert(cursor.state < terminalSourceIndices_.size());
+    return terminalSourceIndices_[cursor.state];
+  }
   size_t ActualMaxWordLen() const { return actualMaxWordLen_; }
   double UnknownWeight() const { return unknownWeight_; }
 
@@ -61,6 +68,7 @@ class DatModel {
   friend class DatBuilder;
   DatModel() : unknownWeight_(0), actualMaxWordLen_(0) {}
   std::vector<uint64_t> units_;
+  std::vector<uint32_t> terminalSourceIndices_;
   std::vector<double> uniqueWeights_;
   double unknownWeight_;
   size_t actualMaxWordLen_;

@@ -1,5 +1,7 @@
 # Jieba CPU 分词优化实现设计：位图 raw DAT 与融合反向 DP
 
+> **2026-09-20 更新：** 已按用户要求删除原 Pointer Trie，并统一为启动后只读词典。当前默认后端、构建失败处理和超长词行为以第 17 节为准。第 1～16 节记录初版设计及提交 `8b8a3f7` 的实现，涉及保留旧 Trie、Legacy 默认或回退的描述仅适用于该历史版本。
+
 本文给出 Jieba 的 CPU 软件优化方案，以当前 cppjieba 的 C++ 实现为行为基线：用 Double-Array Trie（DAT，双数组字典树）查询候选词，候选一旦命中就参与反向动态规划（DP），以环形数组保存分数，以最佳词长数组恢复分词边界，然后继续现有的隐马尔可夫模型（HMM）分词。
 
 文档状态：第一阶段和第 9 节 HMM 优化已在本仓库实现。下文保留设计推导和算法说明，实际接口及验证结果见第 16 节。现状依据为 2026-09-18 工作区中的 cppjieba 源码；布局数字来自 `dat_optimization/02_bitmap_raw` 的归档模型。
@@ -908,7 +910,7 @@ DP 观察接口只用于测试，不能在生产路径为了验证而重新分�
 - [位图 raw DAT 设计](dat_optimization/02_bitmap_raw/DESIGN.md)：空槽位图、最低地址优先布局和模型格式。
 - [位图 raw 构建代码](dat_optimization/02_bitmap_raw/code/layout.py)：逻辑 Trie 和位图布局参考。
 - [位图 raw 查询与验证代码](dat_optimization/02_bitmap_raw/code/dat_model.py)：权重保存、查询和差分校验参考。
-- [Trie.hpp](include/cppjieba/Trie.hpp)、[DictTrie.hpp](include/cppjieba/DictTrie.hpp)、[MPSegment.hpp](include/cppjieba/MPSegment.hpp)：主词典行为基线。
+- [初版 Trie.hpp](https://github.com/lbsswhu/cppjieba/blob/8b8a3f7/include/cppjieba/Trie.hpp)、[DictTrie.hpp](include/cppjieba/DictTrie.hpp)、[MPSegment.hpp](include/cppjieba/MPSegment.hpp)：主词典行为基线。
 - [MixSegment.hpp](include/cppjieba/MixSegment.hpp)、[QuerySegment.hpp](include/cppjieba/QuerySegment.hpp)、[HMMSegment.hpp](include/cppjieba/HMMSegment.hpp)：后处理及 HMM 基线。
 
 实现过程中修改接口、支持范围或默认后端时，应同步更新本文对应章节。模型大小只引用明确输入和构造算法下的结果；性能数字必须标明实际软件版本及测试边界。
@@ -926,3 +928,17 @@ DP 观察接口只用于测试，不能在生产路径为了验证而重新分�
 - 当前工作区的 `LocalVector` 已使用 `std::vector`，GCC 11 实测 `sizeof(Dag)=72 B`；第 12 节的 328 B 是设计举例，不用于本次内存收益计算。
 - 当前实现有独立 DAT、逐位置 MP 决策/分数、逐列 HMM 前驱/分数测试，以及全接口差分、超长词、预算回退和共享模型并发读取测试。新增测试不改变原 UTF-8 解码语义。
 - 基准 A/B/C/D、原始 HEAD 独立二进制、分配诊断和重复运行原始数据见 [CPU 性能报告](docs/cpu-performance.md)。默认切换和发布判断以该报告的初始化、内存和完整路径指标为依据。
+
+
+## 17. 删除 Pointer Trie，统一只读 DAT（2026-09-20）
+
+用户明确选择所有词典初始化后只读，通过启动用户词典提供自定义词。本阶段覆盖第 14.1 节的旧查询结构释放，不引入运行时重建或增量结构。
+
+1. 删除 `include/cppjieba/Trie.hpp` 及 `Trie`、`TrieNode`、`PointerWalker`；`DictTrie` 不再构造、持有或释放旧树。`DictUnit`、`Dag` 与 `MAX_WORD_LENGTH` 移入 `DictTypes.hpp`，仅保留公开查询所需数据类型。
+2. `DatModel` 增加按槽位排列的 `uint32_t terminalSourceIndices`，占每槽 4 字节。索引指向构建输入中原始加载序号，主词典条目在前，启动用户条目在后。非终点使用 `UINT32_MAX`。重复词保留最后加载的索引；共享 `weightCode` 的不同词仍对应各自的词、词性和地址稳定载荷。
+3. `DictTrie::Find` 的精确查询和 DAG 候选枚举均由 DAT 完成。新增 `Contains` 避免存在性查询访问词条元数据；Search 的二/三元词扩展使用该接口，输出顺序不变。`FullSegment` 和 `PosTagger` 保持公开输出语义。
+4. `CpuCutMode` 仅保留 `DatRawFused`，默认即为该模式。启动加载完成后所有词典冻结。两种 `InsertUserWord` 及 `DeleteUserWord` 返回 false；所有公开用户词加载接口拒绝修改并抛出 `logic_error`。HMM 开关和存储在本阶段保持不变，以单独测量去除 Trie 的效果。
+5. 删除 Legacy MP 内核。`L<=65535` 仍用 `uint16_t bestLen`；更长请求在同一融合递推中使用 `size_t bestLenWide`，不截断词长。两条路径都保持 FP64、严格大于比较、有限 `MIN_DOUBLE` 和相同加法顺序。
+6. DAT 构建失败时构造函数抛出 `DatBuildError`，`GetStats()` 返回结构化状态和原因，不发布半成品。构建预算计入源索引表，统计分别报告 `topology_bytes`、`source_index_bytes`、`weight_bytes` 及总 `model_bytes`。
+7. 对照程序分别链接提交 `8b8a3f7` 与当前库，在独立进程中逐字节比较 token、坐标、搜索、全模式、查词、词性和关键词权重。小词典另用独立词表穷举检查全部候选及 DP；测试目录不保留旧 Pointer Trie 实现。
+8. 内存与性能基准同时测量上一版默认 A、上一版 DAT+旧 Trie 的 D，以及本版 DAT-only+D；新旧 HMM 设置保持一致。常规 RSS、峰值 RSS 和单独的空闲页归还诊断分开记录。方法、原始数据和发布评估见 [DAT 独立模型报告](docs/dat-only-performance.md)。
