@@ -1,0 +1,3307 @@
+{
+  "metadata": {
+    "kind": "metadata",
+    "created_utc": "2026-09-20T01:53:43.417286+00:00",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "machine": "x86_64",
+    "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+    "cpu_affinity": [
+      0,
+      2,
+      4,
+      6
+    ],
+    "revision": "59310b0229d52212d87680dbb4233dea1c6d3ff1",
+    "build_metadata": "master=103e1a2; dat_merged=59310b0; same source and GCC11.4 C++11 -O3 -DNDEBUG -fno-fast-math -ffp-contract=off -pthread; extended 4-thread shared-model measurement",
+    "binaries": {
+      "performance": {
+        "path": "/tmp/cppjieba-current-59310b0-benchmark",
+        "sha256": "0f33a533ce11a0545cab56446ce740ed2caa594dc01a267886947685a490f424"
+      },
+      "original": {
+        "path": "/tmp/cppjieba-master-103e1a2-benchmark",
+        "sha256": "473facb64306ddba372050fc90b6c497424ecf2f307374667a4896d845204cb5"
+      }
+    },
+    "input_sha256": {
+      "dict/jieba.dict.utf8": "6f7d4350e8861ef4139b2e3a6fad05430c19ae71f4b8378190edecac8aae2e6a",
+      "dict/hmm_model.utf8": "f17790586ac86dd048c8adffed052c4bd2b28ed0682972c1275e59040c0589a7",
+      "dict/user.dict.utf8": "24e5caba06a8a0bf707b00ff6e1c78afa4d878517dc2cf8b7a88707b980512d3",
+      "dict/idf.utf8": "dbd1e03d72b2263cc8d84a4304ed77677eed9e7deaf43a1a5133bbba9733b535",
+      "dict/stop_words.utf8": "b788b8a939d2e2fe079abd579ea98f12f9fb84370bfd0dddd81bb9381f7ab42c",
+      "test/testdata/synthetic_doc.utf8": "fe72dd38c2f2414b98ba0df4995cc1c2055f38f962f6c92e5bc4e5c2b24eabf3"
+    },
+    "benchmark_source_sha256": "b1bd66afb3baa77763bca6b692e8d97ba1a1713c74041bffb0a9d7e545b10932",
+    "seed": 20260918,
+    "repeats": 5,
+    "iterations": 20000,
+    "notes": [
+      "Each subprocess creates one fresh model; OS page cache is not evicted.",
+      "Cold time includes all Jieba models and keyword dictionaries.",
+      "MP uses predecoded full ranges; other APIs include decoding and output materialization.",
+      "Find uses predecoded complete lookup strings sampled from the same dictionary with deterministic misses.",
+      "Short and lookup corpora run 20 times the requested iterations.",
+      "Optional --corpus full_document uses the complete file and max(1, iterations // 20) requests; all excludes it.",
+      "Diagnostic allocation and MP counters are excluded from performance comparisons.",
+      "Allocation bytes are requested C++ new/new[] bytes, not malloc metadata or stack storage.",
+      "Workers share one model and inherit the recorded CPU affinity; no per-worker pinning."
+    ]
+  },
+  "results": [
+    {
+      "variant": "C",
+      "kind": "cold",
+      "corpus": "",
+      "api": "",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "cold_ms": {
+          "median": 880.54403,
+          "minimum": 867.530747,
+          "maximum": 912.650748,
+          "stdev": 19.585124521089288
+        },
+        "model_rss_bytes": {
+          "median": 91422720,
+          "minimum": 91418624,
+          "maximum": 91422720,
+          "stdev": 2243.4715955411602
+        },
+        "model_rss_delta_bytes": {
+          "median": 88014848,
+          "minimum": 88010752,
+          "maximum": 88014848,
+          "stdev": 2243.4715955411602
+        },
+        "initialization_peak_rss_bytes": {
+          "median": 104460288,
+          "minimum": 104460288,
+          "maximum": 104464384,
+          "stdev": 1831.7868871678277
+        },
+        "dictionary_load_ms": {
+          "median": 134.372221,
+          "minimum": 133.392355,
+          "maximum": 136.948011,
+          "stdev": 1.4338140683506388
+        },
+        "dat_build_ms": {
+          "median": 685.06883,
+          "minimum": 671.197573,
+          "maximum": 713.296878,
+          "stdev": 17.210677981811315
+        },
+        "dat_layout_ms": {
+          "median": 558.926162,
+          "minimum": 547.599878,
+          "maximum": 583.107383,
+          "stdev": 14.642663025062198
+        },
+        "dat_validation_ms": {
+          "median": 20.256084,
+          "minimum": 18.495933,
+          "maximum": 23.02275,
+          "stdev": 1.7372184851561698
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 327808552.463,
+          "minimum": 302446545.304,
+          "maximum": 341228608.052,
+          "stdev": 17130271.240065992
+        },
+        "runes_per_second": {
+          "median": 116030403.637,
+          "minimum": 107053322.638,
+          "maximum": 120780537.382,
+          "stdev": 6063393.622647408
+        },
+        "requests_per_second": {
+          "median": 56655.4705259,
+          "minimum": 52272.1301943,
+          "maximum": 58974.8717684,
+          "stdev": 2960.641417202487
+        },
+        "latency_p50_us": {
+          "median": 68.787,
+          "minimum": 65.461,
+          "maximum": 71.814,
+          "stdev": 2.8230696944992344
+        },
+        "latency_p95_us": {
+          "median": 80.79,
+          "minimum": 77.317,
+          "maximum": 96.141,
+          "stdev": 7.83023714200279
+        },
+        "latency_p99_us": {
+          "median": 113.575,
+          "minimum": 111.081,
+          "maximum": 129.048,
+          "stdev": 8.245347245568254
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 215761447.178,
+          "minimum": 209878122.403,
+          "maximum": 232377681.124,
+          "stdev": 9757081.06328505
+        },
+        "runes_per_second": {
+          "median": 76370453.4775,
+          "minimum": 74288004.6114,
+          "maximum": 82251899.5751,
+          "stdev": 3453595.2328258352
+        },
+        "requests_per_second": {
+          "median": 37290.2604871,
+          "minimum": 36273.4397517,
+          "maximum": 40162.0603394,
+          "stdev": 1686.3257972734177
+        },
+        "latency_p50_us": {
+          "median": 102.233,
+          "minimum": 94.105,
+          "maximum": 102.967,
+          "stdev": 4.58102567117889
+        },
+        "latency_p95_us": {
+          "median": 122.74,
+          "minimum": 116.528,
+          "maximum": 133.929,
+          "stdev": 6.457655511096887
+        },
+        "latency_p99_us": {
+          "median": 174.623,
+          "minimum": 164.435,
+          "maximum": 177.615,
+          "stdev": 5.273411305786796
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 325053056.162,
+          "minimum": 305679619.251,
+          "maximum": 336366369.506,
+          "stdev": 13539253.64678074
+        },
+        "runes_per_second": {
+          "median": 115055074.148,
+          "minimum": 108197694.474,
+          "maximum": 119059509.981,
+          "stdev": 4792324.830337219
+        },
+        "requests_per_second": {
+          "median": 56179.2354237,
+          "minimum": 52830.9055049,
+          "maximum": 58134.5263577,
+          "stdev": 2340.0023585408017
+        },
+        "latency_p50_us": {
+          "median": 65.971,
+          "minimum": 65.397,
+          "maximum": 71.598,
+          "stdev": 3.0656251727828665
+        },
+        "latency_p95_us": {
+          "median": 83.301,
+          "minimum": 80.724,
+          "maximum": 98.453,
+          "stdev": 7.356630906875783
+        },
+        "latency_p99_us": {
+          "median": 118.384,
+          "minimum": 115.71,
+          "maximum": 128.826,
+          "stdev": 5.248298086046559
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 81288545.791,
+          "minimum": 79586941.7914,
+          "maximum": 87357897.3987,
+          "stdev": 3249606.633286133
+        },
+        "runes_per_second": {
+          "median": 28772717.2105,
+          "minimum": 28170421.1526,
+          "maximum": 30921011.7305,
+          "stdev": 1150223.7098155727
+        },
+        "requests_per_second": {
+          "median": 14049.1783254,
+          "minimum": 13755.0884534,
+          "maximum": 15098.150259,
+          "stdev": 561.6326707905777
+        },
+        "latency_p50_us": {
+          "median": 276.854,
+          "minimum": 255.621,
+          "maximum": 281.552,
+          "stdev": 10.794455975175401
+        },
+        "latency_p95_us": {
+          "median": 323.942,
+          "minimum": 314.685,
+          "maximum": 350.91,
+          "stdev": 13.687534558860492
+        },
+        "latency_p99_us": {
+          "median": 417.676,
+          "minimum": 394.392,
+          "maximum": 457.779,
+          "stdev": 23.137441265187473
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 1573672422.3,
+          "minimum": 1511886837.91,
+          "maximum": 1620599301.6,
+          "stdev": 44245966.59022266
+        },
+        "runes_per_second": {
+          "median": 557013674.536,
+          "minimum": 535144183.207,
+          "maximum": 573623810.867,
+          "stdev": 15661206.287216388
+        },
+        "requests_per_second": {
+          "median": 271979.33327,
+          "minimum": 261300.870707,
+          "maximum": 280089.7514,
+          "stdev": 7647.073382324003
+        },
+        "latency_p50_us": {
+          "median": 14.004,
+          "minimum": 13.693,
+          "maximum": 14.933,
+          "stdev": 0.5277838572749265
+        },
+        "latency_p95_us": {
+          "median": 15.415,
+          "minimum": 14.631,
+          "maximum": 18.123,
+          "stdev": 1.418671984639156
+        },
+        "latency_p99_us": {
+          "median": 23.405,
+          "minimum": 21.863,
+          "maximum": 24.917,
+          "stdev": 1.1267097230431633
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 257978471.335,
+          "minimum": 252205082.52,
+          "maximum": 275436530.245,
+          "stdev": 9659270.903917454
+        },
+        "runes_per_second": {
+          "median": 91313499.7053,
+          "minimum": 89269963.5328,
+          "maximum": 97492916.3399,
+          "stdev": 3418974.561297329
+        },
+        "requests_per_second": {
+          "median": 44586.669778,
+          "minimum": 43588.8493813,
+          "maximum": 47603.9630566,
+          "stdev": 1669.4211724919735
+        },
+        "latency_p50_us": {
+          "median": 84.246,
+          "minimum": 78.089,
+          "maximum": 85.932,
+          "stdev": 3.0543635179853768
+        },
+        "latency_p95_us": {
+          "median": 112.746,
+          "minimum": 99.097,
+          "maximum": 146.673,
+          "stdev": 19.43187720473758
+        },
+        "latency_p99_us": {
+          "median": 159.124,
+          "minimum": 141.183,
+          "maximum": 162.995,
+          "stdev": 10.254317515076274
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 547600005.037,
+          "minimum": 533315820.37,
+          "maximum": 575930226.481,
+          "stdev": 15521341.919381838
+        },
+        "runes_per_second": {
+          "median": 193827309.076,
+          "minimum": 188771310.079,
+          "maximum": 203855012.761,
+          "stdev": 5493900.492868848
+        },
+        "requests_per_second": {
+          "median": 94642.2407599,
+          "minimum": 92173.4912496,
+          "maximum": 99538.5804495,
+          "stdev": 2682.5685999370303
+        },
+        "latency_p50_us": {
+          "median": 40.323,
+          "minimum": 37.117,
+          "maximum": 40.348,
+          "stdev": 1.4277628304448897
+        },
+        "latency_p95_us": {
+          "median": 48.807,
+          "minimum": 47.518,
+          "maximum": 58.749,
+          "stdev": 5.105927614057999
+        },
+        "latency_p99_us": {
+          "median": 67.753,
+          "minimum": 62.929,
+          "maximum": 70.907,
+          "stdev": 3.146105640311526
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 746879416.606,
+          "minimum": 692736680.825,
+          "maximum": 766094592.713,
+          "stdev": 29304206.400084246
+        },
+        "runes_per_second": {
+          "median": 248959805.535,
+          "minimum": 230912226.942,
+          "maximum": 255364864.238,
+          "stdev": 9768068.800017543
+        },
+        "requests_per_second": {
+          "median": 25592.085273,
+          "minimum": 23736.865434,
+          "maximum": 26250.5000244,
+          "stdev": 1004.1189144690804
+        },
+        "latency_p50_us": {
+          "median": 150.424,
+          "minimum": 148.058,
+          "maximum": 160.461,
+          "stdev": 5.745576150396069
+        },
+        "latency_p95_us": {
+          "median": 174.557,
+          "minimum": 166.581,
+          "maximum": 185.623,
+          "stdev": 8.126430778638309
+        },
+        "latency_p99_us": {
+          "median": 262.626,
+          "minimum": 246.878,
+          "maximum": 284.559,
+          "stdev": 15.61306674872046
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 183958378.28,
+          "minimum": 179530821.886,
+          "maximum": 188001178.447,
+          "stdev": 3691523.09385527
+        },
+        "runes_per_second": {
+          "median": 61319459.4266,
+          "minimum": 59843607.2955,
+          "maximum": 62667059.4825,
+          "stdev": 1230507.6979563446
+        },
+        "requests_per_second": {
+          "median": 6303.39837856,
+          "minimum": 6151.68660521,
+          "maximum": 6441.92634482,
+          "stdev": 126.49133408193954
+        },
+        "latency_p50_us": {
+          "median": 630.812,
+          "minimum": 594.369,
+          "maximum": 637.046,
+          "stdev": 18.537739789413372
+        },
+        "latency_p95_us": {
+          "median": 704.384,
+          "minimum": 695.787,
+          "maximum": 725.428,
+          "stdev": 12.667673720932338
+        },
+        "latency_p99_us": {
+          "median": 993.329,
+          "minimum": 961.057,
+          "maximum": 1040.274,
+          "stdev": 28.404897813581325
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 423750938.371,
+          "minimum": 415868303.856,
+          "maximum": 451449857.693,
+          "stdev": 16775406.94193103
+        },
+        "runes_per_second": {
+          "median": 141250312.79,
+          "minimum": 138622767.952,
+          "maximum": 150483285.898,
+          "stdev": 5591802.314114602
+        },
+        "requests_per_second": {
+          "median": 14519.9745878,
+          "minimum": 14249.8733503,
+          "maximum": 15469.0877773,
+          "stdev": 574.815204979787
+        },
+        "latency_p50_us": {
+          "median": 269.294,
+          "minimum": 251.377,
+          "maximum": 274.851,
+          "stdev": 11.041045661530427
+        },
+        "latency_p95_us": {
+          "median": 303.064,
+          "minimum": 283.999,
+          "maximum": 318.769,
+          "stdev": 14.259690557652355
+        },
+        "latency_p99_us": {
+          "median": 411.243,
+          "minimum": 390.206,
+          "maximum": 441.716,
+          "stdev": 20.429833511313795
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 395353098.469,
+          "minimum": 360856466.04,
+          "maximum": 396741293.121,
+          "stdev": 15275227.603591625
+        },
+        "runes_per_second": {
+          "median": 131784366.156,
+          "minimum": 120285488.68,
+          "maximum": 132247097.707,
+          "stdev": 5091742.5345349135
+        },
+        "requests_per_second": {
+          "median": 13546.9126394,
+          "minimum": 12364.8734252,
+          "maximum": 13594.4796163,
+          "stdev": 523.411033552465
+        },
+        "latency_p50_us": {
+          "median": 285.835,
+          "minimum": 284.468,
+          "maximum": 308.655,
+          "stdev": 10.447036168215353
+        },
+        "latency_p95_us": {
+          "median": 337.098,
+          "minimum": 322.515,
+          "maximum": 454.783,
+          "stdev": 54.3176602101011
+        },
+        "latency_p99_us": {
+          "median": 473.671,
+          "minimum": 459.387,
+          "maximum": 510.844,
+          "stdev": 20.233942663257697
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 1611249071.43,
+          "minimum": 1600014622.94,
+          "maximum": 1730196930.07,
+          "stdev": 63191980.00600002
+        },
+        "runes_per_second": {
+          "median": 537083023.81,
+          "minimum": 533338207.647,
+          "maximum": 576732310.024,
+          "stdev": 21063993.335011184
+        },
+        "requests_per_second": {
+          "median": 55210.0147831,
+          "minimum": 54825.0624637,
+          "maximum": 59285.8048956,
+          "stdev": 2165.295367499608
+        },
+        "latency_p50_us": {
+          "median": 68.713,
+          "minimum": 63.152,
+          "maximum": 69.648,
+          "stdev": 3.0325542534305936
+        },
+        "latency_p95_us": {
+          "median": 79.295,
+          "minimum": 74.094,
+          "maximum": 80.795,
+          "stdev": 2.820818232357417
+        },
+        "latency_p99_us": {
+          "median": 133.285,
+          "minimum": 126.11,
+          "maximum": 137.303,
+          "stdev": 5.359044252476372
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 550238571.804,
+          "minimum": 509420131.118,
+          "maximum": 556154963.205,
+          "stdev": 19014721.62125616
+        },
+        "runes_per_second": {
+          "median": 183412857.268,
+          "minimum": 169806710.373,
+          "maximum": 185384987.735,
+          "stdev": 6338240.540213821
+        },
+        "requests_per_second": {
+          "median": 18854.117729,
+          "minimum": 17455.4595367,
+          "maximum": 19056.8449563,
+          "stdev": 651.5461081662434
+        },
+        "latency_p50_us": {
+          "median": 202.995,
+          "minimum": 202.29,
+          "maximum": 220.826,
+          "stdev": 7.981946648531295
+        },
+        "latency_p95_us": {
+          "median": 237.949,
+          "minimum": 227.997,
+          "maximum": 248.366,
+          "stdev": 7.788001797637183
+        },
+        "latency_p99_us": {
+          "median": 350.871,
+          "minimum": 345.593,
+          "maximum": 378.196,
+          "stdev": 13.175733064994914
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 738539199.073,
+          "minimum": 730250049.425,
+          "maximum": 749832729.029,
+          "stdev": 7927859.071753551
+        },
+        "runes_per_second": {
+          "median": 246179733.024,
+          "minimum": 243416683.142,
+          "maximum": 249944243.01,
+          "stdev": 2642619.6905077007
+        },
+        "requests_per_second": {
+          "median": 25306.3047928,
+          "minimum": 25022.2741716,
+          "maximum": 25693.2815594,
+          "stdev": 271.6508728049797
+        },
+        "latency_p50_us": {
+          "median": 151.378,
+          "minimum": 151.029,
+          "maximum": 153.951,
+          "stdev": 1.2223610350465188
+        },
+        "latency_p95_us": {
+          "median": 171.977,
+          "minimum": 168.337,
+          "maximum": 186.168,
+          "stdev": 7.760199849230692
+        },
+        "latency_p99_us": {
+          "median": 246.783,
+          "minimum": 220.069,
+          "maximum": 264.118,
+          "stdev": 20.800031855744837
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "lookup",
+      "api": "find",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 702264174.725,
+          "minimum": 638143244.38,
+          "maximum": 720857775.678,
+          "stdev": 35585852.631780624
+        },
+        "runes_per_second": {
+          "median": 232249188.97,
+          "minimum": 211043445.313,
+          "maximum": 238398368.861,
+          "stdev": 11768769.802100323
+        },
+        "requests_per_second": {
+          "median": 70612580.0195,
+          "minimum": 64165228.0288,
+          "maximum": 72482164.4044,
+          "stdev": 3578153.2889722483
+        },
+        "latency_p50_us": {
+          "median": 0.033,
+          "minimum": 0.032,
+          "maximum": 0.036,
+          "stdev": 0.0016431676725154973
+        },
+        "latency_p95_us": {
+          "median": 0.042,
+          "minimum": 0.04,
+          "maximum": 0.046,
+          "stdev": 0.002408318915758458
+        },
+        "latency_p99_us": {
+          "median": 0.053,
+          "minimum": 0.051,
+          "maximum": 0.057,
+          "stdev": 0.0026076809620810618
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 304574724.07,
+          "minimum": 287476922.03,
+          "maximum": 336979134.349,
+          "stdev": 21732849.504127406
+        },
+        "runes_per_second": {
+          "median": 112751219.968,
+          "minimum": 106421745.175,
+          "maximum": 124747083.389,
+          "stdev": 8045333.710567373
+        },
+        "requests_per_second": {
+          "median": 11714412.4642,
+          "minimum": 11056804.6935,
+          "maximum": 12960735.9365,
+          "stdev": 835878.8270822678
+        },
+        "latency_p50_us": {
+          "median": 0.266,
+          "minimum": 0.248,
+          "maximum": 0.295,
+          "stdev": 0.019165072397463043
+        },
+        "latency_p95_us": {
+          "median": 0.365,
+          "minimum": 0.33,
+          "maximum": 0.383,
+          "stdev": 0.023114930239998555
+        },
+        "latency_p99_us": {
+          "median": 0.396,
+          "minimum": 0.345,
+          "maximum": 0.429,
+          "stdev": 0.03166228039797514
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 151353141.472,
+          "minimum": 133883208.837,
+          "maximum": 152945692.867,
+          "stdev": 8995391.271226054
+        },
+        "runes_per_second": {
+          "median": 56029768.718,
+          "minimum": 49562534.0404,
+          "maximum": 56619318.994,
+          "stdev": 3330024.653333323
+        },
+        "requests_per_second": {
+          "median": 5821274.672,
+          "minimum": 5149354.18602,
+          "maximum": 5882526.64873,
+          "stdev": 345976.58736165444
+        },
+        "latency_p50_us": {
+          "median": 0.488,
+          "minimum": 0.482,
+          "maximum": 0.568,
+          "stdev": 0.036694686263817534
+        },
+        "latency_p95_us": {
+          "median": 0.859,
+          "minimum": 0.802,
+          "maximum": 0.904,
+          "stdev": 0.047481575374033226
+        },
+        "latency_p99_us": {
+          "median": 0.929,
+          "minimum": 0.835,
+          "maximum": 0.957,
+          "stdev": 0.056131096550842474
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 302260797.417,
+          "minimum": 273268705.46,
+          "maximum": 306433952.08,
+          "stdev": 15754419.139003245
+        },
+        "runes_per_second": {
+          "median": 111894622.121,
+          "minimum": 101161972.694,
+          "maximum": 113439491.876,
+          "stdev": 5832164.777612935
+        },
+        "requests_per_second": {
+          "median": 11625415.2853,
+          "minimum": 10510334.8254,
+          "maximum": 11785921.2339,
+          "stdev": 605939.1976605726
+        },
+        "latency_p50_us": {
+          "median": 0.296,
+          "minimum": 0.29,
+          "maximum": 0.334,
+          "stdev": 0.019269146322554113
+        },
+        "latency_p95_us": {
+          "median": 0.35,
+          "minimum": 0.343,
+          "maximum": 0.376,
+          "stdev": 0.015565988564816552
+        },
+        "latency_p99_us": {
+          "median": 0.393,
+          "minimum": 0.352,
+          "maximum": 0.427,
+          "stdev": 0.03034303874037669
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 124404534.407,
+          "minimum": 107129412.99,
+          "maximum": 128016156.033,
+          "stdev": 8367445.930658129
+        },
+        "runes_per_second": {
+          "median": 46053601.6793,
+          "minimum": 39658484.6165,
+          "maximum": 47390596.2237,
+          "stdev": 3097564.118508766
+        },
+        "requests_per_second": {
+          "median": 4784789.78487,
+          "minimum": 4120362.03808,
+          "maximum": 4923698.30895,
+          "stdev": 321824.84347966086
+        },
+        "latency_p50_us": {
+          "median": 0.602,
+          "minimum": 0.6,
+          "maximum": 0.682,
+          "stdev": 0.03493994848307596
+        },
+        "latency_p95_us": {
+          "median": 0.963,
+          "minimum": 0.929,
+          "maximum": 1.176,
+          "stdev": 0.10334311781633061
+        },
+        "latency_p99_us": {
+          "median": 1.057,
+          "minimum": 0.974,
+          "maximum": 1.831,
+          "stdev": 0.3722333945255315
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 769903751.667,
+          "minimum": 599636873.747,
+          "maximum": 801429194.848,
+          "stdev": 87052076.18177938
+        },
+        "runes_per_second": {
+          "median": 285012446.531,
+          "minimum": 221980958.07,
+          "maximum": 296682923.093,
+          "stdev": 32226008.971171856
+        },
+        "requests_per_second": {
+          "median": 29611682.7564,
+          "minimum": 23062956.6826,
+          "maximum": 30824199.8018,
+          "stdev": 3348156.776206536
+        },
+        "latency_p50_us": {
+          "median": 0.103,
+          "minimum": 0.098,
+          "maximum": 0.115,
+          "stdev": 0.007496665925596525
+        },
+        "latency_p95_us": {
+          "median": 0.126,
+          "minimum": 0.119,
+          "maximum": 0.169,
+          "stdev": 0.020510972673181548
+        },
+        "latency_p99_us": {
+          "median": 0.136,
+          "minimum": 0.132,
+          "maximum": 0.213,
+          "stdev": 0.037692174254080904
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 241520460.475,
+          "minimum": 233319521.865,
+          "maximum": 250138117.129,
+          "stdev": 6846813.91627381
+        },
+        "runes_per_second": {
+          "median": 89409016.6183,
+          "minimum": 86373092.2287,
+          "maximum": 92599206.8217,
+          "stdev": 2534637.8440437573
+        },
+        "requests_per_second": {
+          "median": 9289248.47983,
+          "minimum": 8973827.76402,
+          "maximum": 9620696.81264,
+          "stdev": 263338.9967828377
+        },
+        "latency_p50_us": {
+          "median": 0.374,
+          "minimum": 0.348,
+          "maximum": 0.392,
+          "stdev": 0.018533752992850653
+        },
+        "latency_p95_us": {
+          "median": 0.45,
+          "minimum": 0.435,
+          "maximum": 0.463,
+          "stdev": 0.012833549781724473
+        },
+        "latency_p99_us": {
+          "median": 0.476,
+          "minimum": 0.463,
+          "maximum": 0.494,
+          "stdev": 0.013367871932360808
+        }
+      }
+    },
+    {
+      "variant": "C",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 328775670.069,
+          "minimum": 319266139.763,
+          "maximum": 343663857.887,
+          "stdev": 10365206.714082148
+        },
+        "runes_per_second": {
+          "median": 121710224.016,
+          "minimum": 118189869.047,
+          "maximum": 127221716.621,
+          "stdev": 3837119.792988975
+        },
+        "requests_per_second": {
+          "median": 12645218.0796,
+          "minimum": 12279466.914,
+          "maximum": 13217840.6879,
+          "stdev": 398661.79667202337
+        },
+        "latency_p50_us": {
+          "median": 0.218,
+          "minimum": 0.206,
+          "maximum": 0.226,
+          "stdev": 0.008111719916269307
+        },
+        "latency_p95_us": {
+          "median": 0.362,
+          "minimum": 0.346,
+          "maximum": 0.376,
+          "stdev": 0.012969194269498791
+        },
+        "latency_p99_us": {
+          "median": 0.389,
+          "minimum": 0.367,
+          "maximum": 0.432,
+          "stdev": 0.027671284755139212
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "cold",
+      "corpus": "",
+      "api": "",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "cold_ms": {
+          "median": 875.864756,
+          "minimum": 861.62769,
+          "maximum": 946.809698,
+          "stdev": 42.102401501065955
+        },
+        "model_rss_bytes": {
+          "median": 91418624,
+          "minimum": 91418624,
+          "maximum": 91422720,
+          "stdev": 2243.4715955411602
+        },
+        "model_rss_delta_bytes": {
+          "median": 88010752,
+          "minimum": 88010752,
+          "maximum": 88014848,
+          "stdev": 2243.4715955411602
+        },
+        "initialization_peak_rss_bytes": {
+          "median": 104460288,
+          "minimum": 104456192,
+          "maximum": 104464384,
+          "stdev": 2896.309375740099
+        },
+        "dictionary_load_ms": {
+          "median": 139.974217,
+          "minimum": 135.10157,
+          "maximum": 147.946956,
+          "stdev": 6.277697675159058
+        },
+        "dat_build_ms": {
+          "median": 677.346569,
+          "minimum": 668.562308,
+          "maximum": 735.397373,
+          "stdev": 33.99439371909736
+        },
+        "dat_layout_ms": {
+          "median": 553.901035,
+          "minimum": 546.408659,
+          "maximum": 598.310046,
+          "stdev": 26.583201806204748
+        },
+        "dat_validation_ms": {
+          "median": 18.354518,
+          "minimum": 17.033279,
+          "maximum": 20.109107,
+          "stdev": 1.1287452040124029
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 434399917.769,
+          "minimum": 399798869.246,
+          "maximum": 441066890.496,
+          "stdev": 19457252.08928415
+        },
+        "runes_per_second": {
+          "median": 153759251.917,
+          "minimum": 141511939.892,
+          "maximum": 156119079.111,
+          "stdev": 6887046.712553254
+        },
+        "requests_per_second": {
+          "median": 75077.759725,
+          "minimum": 69097.6269004,
+          "maximum": 76230.0190972,
+          "stdev": 3362.8157776705157
+        },
+        "latency_p50_us": {
+          "median": 49.86,
+          "minimum": 49.619,
+          "maximum": 54.1,
+          "stdev": 2.3320208403871527
+        },
+        "latency_p95_us": {
+          "median": 65.737,
+          "minimum": 61.328,
+          "maximum": 69.476,
+          "stdev": 3.94764467752608
+        },
+        "latency_p99_us": {
+          "median": 94.004,
+          "minimum": 86.657,
+          "maximum": 99.11,
+          "stdev": 5.346492279990686
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 226786997.119,
+          "minimum": 203918646.046,
+          "maximum": 231949479.816,
+          "stdev": 11601524.75739794
+        },
+        "runes_per_second": {
+          "median": 80273033.2009,
+          "minimum": 72178601.2968,
+          "maximum": 82100334.3696,
+          "stdev": 4106450.5189532265
+        },
+        "requests_per_second": {
+          "median": 39195.8169926,
+          "minimum": 35243.4576644,
+          "maximum": 40088.0538914,
+          "stdev": 2005.1027924769974
+        },
+        "latency_p50_us": {
+          "median": 95.483,
+          "minimum": 94.883,
+          "maximum": 102.53,
+          "stdev": 4.012095250614072
+        },
+        "latency_p95_us": {
+          "median": 115.454,
+          "minimum": 114.782,
+          "maximum": 167.796,
+          "stdev": 22.80240248307182
+        },
+        "latency_p99_us": {
+          "median": 165.891,
+          "minimum": 163.979,
+          "maximum": 183.624,
+          "stdev": 9.278729880754153
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 525531541.184,
+          "minimum": 478569178.403,
+          "maximum": 537113650.477,
+          "stdev": 28147663.672375537
+        },
+        "runes_per_second": {
+          "median": 186016003.516,
+          "minimum": 169393307.53,
+          "maximum": 190115581.78,
+          "stdev": 9963085.931829007
+        },
+        "requests_per_second": {
+          "median": 90828.1267169,
+          "minimum": 82711.5759424,
+          "maximum": 92829.8739159,
+          "stdev": 4864.788052647162
+        },
+        "latency_p50_us": {
+          "median": 42.188,
+          "minimum": 41.624,
+          "maximum": 46.033,
+          "stdev": 2.0336767196385956
+        },
+        "latency_p95_us": {
+          "median": 51.874,
+          "minimum": 50.126,
+          "maximum": 66.174,
+          "stdev": 6.696711282413184
+        },
+        "latency_p99_us": {
+          "median": 69.585,
+          "minimum": 65.665,
+          "maximum": 76.84,
+          "stdev": 4.21958662667328
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 92165564.5476,
+          "minimum": 86638162.8508,
+          "maximum": 94874423.5342,
+          "stdev": 3705125.228717674
+        },
+        "runes_per_second": {
+          "median": 32622723.1582,
+          "minimum": 30666256.0523,
+          "maximum": 33581545.0048,
+          "stdev": 1311458.0829986343
+        },
+        "requests_per_second": {
+          "median": 15929.0640421,
+          "minimum": 14973.757838,
+          "maximum": 16397.2387719,
+          "stdev": 640.3603921183221
+        },
+        "latency_p50_us": {
+          "median": 242.347,
+          "minimum": 234.253,
+          "maximum": 255.719,
+          "stdev": 10.618315883415788
+        },
+        "latency_p95_us": {
+          "median": 309.468,
+          "minimum": 290.727,
+          "maximum": 355.302,
+          "stdev": 24.356071429933042
+        },
+        "latency_p99_us": {
+          "median": 368.495,
+          "minimum": 359.388,
+          "maximum": 403.5,
+          "stdev": 21.264968438725692
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 1574857822.2,
+          "minimum": 1253008107.35,
+          "maximum": 1631286024.73,
+          "stdev": 152622028.91071817
+        },
+        "runes_per_second": {
+          "median": 557433256.111,
+          "minimum": 443512029.701,
+          "maximum": 577406460.189,
+          "stdev": 54021762.047941275
+        },
+        "requests_per_second": {
+          "median": 272184.207086,
+          "minimum": 216558.608252,
+          "maximum": 281936.748139,
+          "stdev": 26377.813500189877
+        },
+        "latency_p50_us": {
+          "median": 13.741,
+          "minimum": 13.573,
+          "maximum": 14.712,
+          "stdev": 0.5406879876601659
+        },
+        "latency_p95_us": {
+          "median": 15.996,
+          "minimum": 14.666,
+          "maximum": 26.359,
+          "stdev": 4.808790721168889
+        },
+        "latency_p99_us": {
+          "median": 25.614,
+          "minimum": 23.148,
+          "maximum": 29.11,
+          "stdev": 2.277425234777203
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 347566114.669,
+          "minimum": 311765919.165,
+          "maximum": 357821427.553,
+          "stdev": 20300144.277816914
+        },
+        "runes_per_second": {
+          "median": 123023747.467,
+          "minimum": 110351987.979,
+          "maximum": 126653695.753,
+          "stdev": 7185395.002222229
+        },
+        "requests_per_second": {
+          "median": 60070.1891928,
+          "minimum": 53882.8066306,
+          "maximum": 61842.6248795,
+          "stdev": 3508.4936532806905
+        },
+        "latency_p50_us": {
+          "median": 62.931,
+          "minimum": 62.246,
+          "maximum": 67.72,
+          "stdev": 2.7354997715225617
+        },
+        "latency_p95_us": {
+          "median": 76.845,
+          "minimum": 73.657,
+          "maximum": 117.293,
+          "stdev": 19.181509833691408
+        },
+        "latency_p99_us": {
+          "median": 112.072,
+          "minimum": 101.921,
+          "maximum": 131.099,
+          "stdev": 12.809667353214127
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 537418683.786,
+          "minimum": 504930624.422,
+          "maximum": 586515492.856,
+          "stdev": 37261725.24144686
+        },
+        "runes_per_second": {
+          "median": 190223550.708,
+          "minimum": 178724147.739,
+          "maximum": 207601750.669,
+          "stdev": 13189079.380250197
+        },
+        "requests_per_second": {
+          "median": 92882.5931189,
+          "minimum": 87267.650263,
+          "maximum": 101368.042319,
+          "stdev": 6439.980166289085
+        },
+        "latency_p50_us": {
+          "median": 39.992,
+          "minimum": 37.569,
+          "maximum": 40.952,
+          "stdev": 1.6071588284920664
+        },
+        "latency_p95_us": {
+          "median": 50.569,
+          "minimum": 45.734,
+          "maximum": 65.504,
+          "stdev": 9.85511300290362
+        },
+        "latency_p99_us": {
+          "median": 71.301,
+          "minimum": 62.581,
+          "maximum": 73.131,
+          "stdev": 5.222657292987928
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 742923766.632,
+          "minimum": 691175163.894,
+          "maximum": 772374630.31,
+          "stdev": 30623486.039133716
+        },
+        "runes_per_second": {
+          "median": 247641255.544,
+          "minimum": 230391721.298,
+          "maximum": 257458210.103,
+          "stdev": 10207828.679641627
+        },
+        "requests_per_second": {
+          "median": 25456.5435386,
+          "minimum": 23683.3595084,
+          "maximum": 26465.6877162,
+          "stdev": 1049.3244942217934
+        },
+        "latency_p50_us": {
+          "median": 147.764,
+          "minimum": 146.9,
+          "maximum": 161.604,
+          "stdev": 6.336425238255405
+        },
+        "latency_p95_us": {
+          "median": 172.77,
+          "minimum": 163.591,
+          "maximum": 214.384,
+          "stdev": 20.365298176064098
+        },
+        "latency_p99_us": {
+          "median": 261.041,
+          "minimum": 212.845,
+          "maximum": 285.669,
+          "stdev": 26.77098667774499
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 186475054.279,
+          "minimum": 177158910.528,
+          "maximum": 192178767.724,
+          "stdev": 6061083.4026137395
+        },
+        "runes_per_second": {
+          "median": 62158351.4264,
+          "minimum": 59052970.1761,
+          "maximum": 64059589.2414,
+          "stdev": 2020361.13418602
+        },
+        "requests_per_second": {
+          "median": 6389.63316472,
+          "minimum": 6070.41223028,
+          "maximum": 6585.07290721,
+          "stdev": 207.68514948101958
+        },
+        "latency_p50_us": {
+          "median": 604.34,
+          "minimum": 583.713,
+          "maximum": 634.704,
+          "stdev": 22.64999296467879
+        },
+        "latency_p95_us": {
+          "median": 725.024,
+          "minimum": 680.077,
+          "maximum": 736.124,
+          "stdev": 25.33325449878086
+        },
+        "latency_p99_us": {
+          "median": 951.64,
+          "minimum": 932.923,
+          "maximum": 1016.956,
+          "stdev": 37.921291384919904
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 553634088.665,
+          "minimum": 494798263.289,
+          "maximum": 563976735.623,
+          "stdev": 28719869.93550001
+        },
+        "runes_per_second": {
+          "median": 184544696.222,
+          "minimum": 164932754.43,
+          "maximum": 187992245.208,
+          "stdev": 9573289.978406172
+        },
+        "requests_per_second": {
+          "median": 18970.4663057,
+          "minimum": 16954.436105,
+          "maximum": 19324.8607327,
+          "stdev": 984.0964204960572
+        },
+        "latency_p50_us": {
+          "median": 204.11,
+          "minimum": 201.211,
+          "maximum": 229.198,
+          "stdev": 11.983284387011766
+        },
+        "latency_p95_us": {
+          "median": 245.191,
+          "minimum": 226.645,
+          "maximum": 274.989,
+          "stdev": 18.361843202685275
+        },
+        "latency_p99_us": {
+          "median": 292.649,
+          "minimum": 275.461,
+          "maximum": 329.816,
+          "stdev": 20.78857404200681
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 376848139.319,
+          "minimum": 362806393.606,
+          "maximum": 398942002.91,
+          "stdev": 16141360.796800002
+        },
+        "runes_per_second": {
+          "median": 125616046.44,
+          "minimum": 120935464.535,
+          "maximum": 132980667.637,
+          "stdev": 5380453.599096031
+        },
+        "requests_per_second": {
+          "median": 12912.8337212,
+          "minimum": 12431.6883774,
+          "maximum": 13669.8877094,
+          "stdev": 553.089391339525
+        },
+        "latency_p50_us": {
+          "median": 297.178,
+          "minimum": 284.396,
+          "maximum": 310.009,
+          "stdev": 11.757762393414835
+        },
+        "latency_p95_us": {
+          "median": 353.797,
+          "minimum": 317.443,
+          "maximum": 421.014,
+          "stdev": 41.57793563658495
+        },
+        "latency_p99_us": {
+          "median": 497.534,
+          "minimum": 454.213,
+          "maximum": 509.056,
+          "stdev": 23.5067170357751
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 1726633318.04,
+          "minimum": 1609661188.22,
+          "maximum": 1737660307.56,
+          "stdev": 54239835.445822455
+        },
+        "runes_per_second": {
+          "median": 575544439.348,
+          "minimum": 536553729.406,
+          "maximum": 579220102.52,
+          "stdev": 18079945.148902375
+        },
+        "requests_per_second": {
+          "median": 59163.696479,
+          "minimum": 55155.6054076,
+          "maximum": 59541.5401439,
+          "stdev": 1858.5469931532737
+        },
+        "latency_p50_us": {
+          "median": 64.42,
+          "minimum": 63.459,
+          "maximum": 69.741,
+          "stdev": 2.6197815176079082
+        },
+        "latency_p95_us": {
+          "median": 74.158,
+          "minimum": 72.822,
+          "maximum": 78.521,
+          "stdev": 2.4393494419619324
+        },
+        "latency_p99_us": {
+          "median": 126.633,
+          "minimum": 126.081,
+          "maximum": 133.289,
+          "stdev": 3.0283847179643413
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 546933601.974,
+          "minimum": 513259746.071,
+          "maximum": 551306382.851,
+          "stdev": 15844177.57373204
+        },
+        "runes_per_second": {
+          "median": 182311200.658,
+          "minimum": 171086582.024,
+          "maximum": 183768794.284,
+          "stdev": 5281392.524459434
+        },
+        "requests_per_second": {
+          "median": 18740.8717782,
+          "minimum": 17587.0252903,
+          "maximum": 18890.7066492,
+          "stdev": 542.906303896152
+        },
+        "latency_p50_us": {
+          "median": 205.984,
+          "minimum": 204.315,
+          "maximum": 219.698,
+          "stdev": 6.341383263925943
+        },
+        "latency_p95_us": {
+          "median": 236.448,
+          "minimum": 229.854,
+          "maximum": 247.128,
+          "stdev": 7.338503948353497
+        },
+        "latency_p99_us": {
+          "median": 349.79,
+          "minimum": 322.948,
+          "maximum": 372.29,
+          "stdev": 19.587102521812678
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 707057121.405,
+          "minimum": 686407655.02,
+          "maximum": 733554880.447,
+          "stdev": 21942700.10784561
+        },
+        "runes_per_second": {
+          "median": 235685707.135,
+          "minimum": 228802551.673,
+          "maximum": 244518293.482,
+          "stdev": 7314233.369201361
+        },
+        "requests_per_second": {
+          "median": 24227.5603552,
+          "minimum": 23519.9991441,
+          "maximum": 25135.5153662,
+          "stdev": 751.8743183570189
+        },
+        "latency_p50_us": {
+          "median": 154.001,
+          "minimum": 151.771,
+          "maximum": 164.572,
+          "stdev": 6.57538633845951
+        },
+        "latency_p95_us": {
+          "median": 182.598,
+          "minimum": 174.092,
+          "maximum": 200.407,
+          "stdev": 10.37064791611402
+        },
+        "latency_p99_us": {
+          "median": 276.07,
+          "minimum": 262.357,
+          "maximum": 283.719,
+          "stdev": 9.511108121559754
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "lookup",
+      "api": "find",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 711570200.777,
+          "minimum": 632040423.895,
+          "maximum": 743425942.209,
+          "stdev": 47958402.08514232
+        },
+        "runes_per_second": {
+          "median": 235326829.951,
+          "minimum": 209025151.972,
+          "maximum": 245861996.598,
+          "stdev": 15860555.599002004
+        },
+        "requests_per_second": {
+          "median": 71548299.8425,
+          "minimum": 63551590.1482,
+          "maximum": 74751390.8898,
+          "stdev": 4822211.678612286
+        },
+        "latency_p50_us": {
+          "median": 0.033,
+          "minimum": 0.031,
+          "maximum": 0.036,
+          "stdev": 0.0019235384061671336
+        },
+        "latency_p95_us": {
+          "median": 0.041,
+          "minimum": 0.038,
+          "maximum": 0.045,
+          "stdev": 0.002880972058177586
+        },
+        "latency_p99_us": {
+          "median": 0.053,
+          "minimum": 0.047,
+          "maximum": 0.056,
+          "stdev": 0.0037013511046643495
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 345725900.395,
+          "minimum": 258195074.422,
+          "maximum": 357331106.336,
+          "stdev": 41294653.643822245
+        },
+        "runes_per_second": {
+          "median": 127985068.896,
+          "minimum": 95581830.4353,
+          "maximum": 132281226.865,
+          "stdev": 15286963.127763694
+        },
+        "requests_per_second": {
+          "median": 13297150.0152,
+          "minimum": 9930579.78548,
+          "maximum": 13743504.0898,
+          "stdev": 1588255.9093611236
+        },
+        "latency_p50_us": {
+          "median": 0.254,
+          "minimum": 0.236,
+          "maximum": 0.264,
+          "stdev": 0.012501999840025606
+        },
+        "latency_p95_us": {
+          "median": 0.339,
+          "minimum": 0.327,
+          "maximum": 0.605,
+          "stdev": 0.12001333259267487
+        },
+        "latency_p99_us": {
+          "median": 0.535,
+          "minimum": 0.364,
+          "maximum": 0.637,
+          "stdev": 0.12185319035626438
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 147550021.976,
+          "minimum": 131823708.504,
+          "maximum": 153809421.608,
+          "stdev": 8583074.431735577
+        },
+        "runes_per_second": {
+          "median": 54621883.1352,
+          "minimum": 48800122.8597,
+          "maximum": 56939064.7299,
+          "stdev": 3177388.1309168446
+        },
+        "requests_per_second": {
+          "median": 5675000.84522,
+          "minimum": 5070142.63477,
+          "maximum": 5915746.98492,
+          "stdev": 330118.2473685573
+        },
+        "latency_p50_us": {
+          "median": 0.483,
+          "minimum": 0.478,
+          "maximum": 0.524,
+          "stdev": 0.02337733945512194
+        },
+        "latency_p95_us": {
+          "median": 0.812,
+          "minimum": 0.801,
+          "maximum": 0.913,
+          "stdev": 0.047251455004052506
+        },
+        "latency_p99_us": {
+          "median": 0.914,
+          "minimum": 0.846,
+          "maximum": 1.582,
+          "stdev": 0.3415625857730908
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 360243499.666,
+          "minimum": 298433556.696,
+          "maximum": 370737001.275,
+          "stdev": 30046243.255518857
+        },
+        "runes_per_second": {
+          "median": 133359372.472,
+          "minimum": 110477807.046,
+          "maximum": 137243986.049,
+          "stdev": 11122888.128298307
+        },
+        "requests_per_second": {
+          "median": 13855519.2179,
+          "minimum": 11478213.7191,
+          "maximum": 14259115.4336,
+          "stdev": 1155624.740580113
+        },
+        "latency_p50_us": {
+          "median": 0.233,
+          "minimum": 0.228,
+          "maximum": 0.254,
+          "stdev": 0.012469963913339922
+        },
+        "latency_p95_us": {
+          "median": 0.295,
+          "minimum": 0.286,
+          "maximum": 0.495,
+          "stdev": 0.08948631180242038
+        },
+        "latency_p99_us": {
+          "median": 0.368,
+          "minimum": 0.33,
+          "maximum": 0.552,
+          "stdev": 0.09176437217133893
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 132493030.261,
+          "minimum": 122721536.032,
+          "maximum": 140318988.235,
+          "stdev": 7187876.3860710515
+        },
+        "runes_per_second": {
+          "median": 49047900.6256,
+          "minimum": 45430568.6272,
+          "maximum": 51945010.0679,
+          "stdev": 2660896.5467841704
+        },
+        "requests_per_second": {
+          "median": 5095885.77929,
+          "minimum": 4720059.07815,
+          "maximum": 5396884.1629,
+          "stdev": 276456.78408281115
+        },
+        "latency_p50_us": {
+          "median": 0.591,
+          "minimum": 0.558,
+          "maximum": 0.651,
+          "stdev": 0.03534826728426727
+        },
+        "latency_p95_us": {
+          "median": 0.903,
+          "minimum": 0.857,
+          "maximum": 1.2,
+          "stdev": 0.13838244108267492
+        },
+        "latency_p99_us": {
+          "median": 0.969,
+          "minimum": 0.949,
+          "maximum": 1.511,
+          "stdev": 0.24266788003359652
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 721749776.847,
+          "minimum": 650566317.98,
+          "maximum": 802834313.911,
+          "stdev": 53903612.84556753
+        },
+        "runes_per_second": {
+          "median": 267186215.468,
+          "minimum": 240834646.56,
+          "maximum": 297203087.361,
+          "stdev": 19954702.832110073
+        },
+        "requests_per_second": {
+          "median": 27759606.8018,
+          "minimum": 25021781.4608,
+          "maximum": 30878242.8427,
+          "stdev": 2073215.8786548176
+        },
+        "latency_p50_us": {
+          "median": 0.108,
+          "minimum": 0.1,
+          "maximum": 0.109,
+          "stdev": 0.004098780306383838
+        },
+        "latency_p95_us": {
+          "median": 0.132,
+          "minimum": 0.129,
+          "maximum": 0.185,
+          "stdev": 0.025485289874749312
+        },
+        "latency_p99_us": {
+          "median": 0.178,
+          "minimum": 0.146,
+          "maximum": 0.208,
+          "stdev": 0.024570307283385773
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 269892448.897,
+          "minimum": 179509882.442,
+          "maximum": 294635458.879,
+          "stdev": 45762152.83385849
+        },
+        "runes_per_second": {
+          "median": 99912108.486,
+          "minimum": 66453177.6347,
+          "maximum": 109071780.45,
+          "stdev": 16940796.96250006
+        },
+        "requests_per_second": {
+          "median": 10380478.8037,
+          "minimum": 6904226.24777,
+          "maximum": 11332133.0338,
+          "stdev": 1760082.8013030328
+        },
+        "latency_p50_us": {
+          "median": 0.319,
+          "minimum": 0.294,
+          "maximum": 0.326,
+          "stdev": 0.01383835250309806
+        },
+        "latency_p95_us": {
+          "median": 0.422,
+          "minimum": 0.39,
+          "maximum": 0.428,
+          "stdev": 0.016093476939431074
+        },
+        "latency_p99_us": {
+          "median": 0.483,
+          "minimum": 0.448,
+          "maximum": 0.608,
+          "stdev": 0.06748925840457871
+        }
+      }
+    },
+    {
+      "variant": "D",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 343716581.618,
+          "minimum": 342031366.381,
+          "maximum": 375357220.971,
+          "stdev": 17000567.76399508
+        },
+        "runes_per_second": {
+          "median": 127241234.541,
+          "minimum": 126617380.824,
+          "maximum": 138954355.84,
+          "stdev": 6293479.412490937
+        },
+        "requests_per_second": {
+          "median": 13219868.5238,
+          "minimum": 13155052.5531,
+          "maximum": 14436816.1912,
+          "stdev": 653867.9909120564
+        },
+        "latency_p50_us": {
+          "median": 0.206,
+          "minimum": 0.192,
+          "maximum": 0.209,
+          "stdev": 0.007905694150420941
+        },
+        "latency_p95_us": {
+          "median": 0.348,
+          "minimum": 0.32,
+          "maximum": 0.353,
+          "stdev": 0.015056560032092306
+        },
+        "latency_p99_us": {
+          "median": 0.363,
+          "minimum": 0.348,
+          "maximum": 0.385,
+          "stdev": 0.016155494421403526
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "cold",
+      "corpus": "",
+      "api": "",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "cold_ms": {
+          "median": 244.273314,
+          "minimum": 241.937094,
+          "maximum": 269.390495,
+          "stdev": 13.80244210457461
+        },
+        "model_rss_bytes": {
+          "median": 129302528,
+          "minimum": 129159168,
+          "maximum": 129302528,
+          "stdev": 63679.298890612794
+        },
+        "model_rss_delta_bytes": {
+          "median": 125894656,
+          "minimum": 125751296,
+          "maximum": 125894656,
+          "stdev": 63679.298890612794
+        },
+        "initialization_peak_rss_bytes": {
+          "median": 129302528,
+          "minimum": 129159168,
+          "maximum": 129302528,
+          "stdev": 63679.298890612794
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 128623228.654,
+          "minimum": 125386745.432,
+          "maximum": 148209130.368,
+          "stdev": 9266977.399610085
+        },
+        "runes_per_second": {
+          "median": 45527198.8044,
+          "minimum": 44381620.2288,
+          "maximum": 52459782.059,
+          "stdev": 3280119.204004137
+        },
+        "requests_per_second": {
+          "median": 22230.0775412,
+          "minimum": 21670.7130023,
+          "maximum": 25615.1279585,
+          "stdev": 1601.6207050874236
+        },
+        "latency_p50_us": {
+          "median": 170.045,
+          "minimum": 144.306,
+          "maximum": 171.707,
+          "stdev": 11.7270591880488
+        },
+        "latency_p95_us": {
+          "median": 219.706,
+          "minimum": 212.086,
+          "maximum": 271.835,
+          "stdev": 24.83840756369054
+        },
+        "latency_p99_us": {
+          "median": 302.455,
+          "minimum": 262.07,
+          "maximum": 313.131,
+          "stdev": 19.6908032416151
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 156914227.318,
+          "minimum": 153526550.707,
+          "maximum": 179483193.066,
+          "stdev": 10936842.31836069
+        },
+        "runes_per_second": {
+          "median": 55541019.2788,
+          "minimum": 54341924.6196,
+          "maximum": 63529481.4034,
+          "stdev": 3871180.965787167
+        },
+        "requests_per_second": {
+          "median": 27119.6383197,
+          "minimum": 26534.1428807,
+          "maximum": 31020.2545915,
+          "stdev": 1890.2250809382701
+        },
+        "latency_p50_us": {
+          "median": 141.11,
+          "minimum": 120.657,
+          "maximum": 142.957,
+          "stdev": 9.46297836307365
+        },
+        "latency_p95_us": {
+          "median": 168.069,
+          "minimum": 152.958,
+          "maximum": 209.878,
+          "stdev": 21.59305537667145
+        },
+        "latency_p99_us": {
+          "median": 248.494,
+          "minimum": 223.735,
+          "maximum": 256.449,
+          "stdev": 13.289140088809354
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 312398011.545,
+          "minimum": 304110818.781,
+          "maximum": 365740783.906,
+          "stdev": 25413998.20322967
+        },
+        "runes_per_second": {
+          "median": 110575722.026,
+          "minimum": 107642405.265,
+          "maximum": 129456813.937,
+          "stdev": 8995483.636516059
+        },
+        "requests_per_second": {
+          "median": 53992.0517707,
+          "minimum": 52559.7681959,
+          "maximum": 63211.3349302,
+          "stdev": 4392.325994333377
+        },
+        "latency_p50_us": {
+          "median": 71.155,
+          "minimum": 60.002,
+          "maximum": 72.546,
+          "stdev": 5.193395055260095
+        },
+        "latency_p95_us": {
+          "median": 85.561,
+          "minimum": 73.172,
+          "maximum": 97.564,
+          "stdev": 8.681133583812656
+        },
+        "latency_p99_us": {
+          "median": 122.755,
+          "minimum": 108.859,
+          "maximum": 128.018,
+          "stdev": 7.240097464813581
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 52637896.2227,
+          "minimum": 51115708.4476,
+          "maximum": 58792420.0914,
+          "stdev": 3018368.9070664635
+        },
+        "runes_per_second": {
+          "median": 18631595.4829,
+          "minimum": 18092805.2023,
+          "maximum": 20810037.3915,
+          "stdev": 1068375.3062074238
+        },
+        "requests_per_second": {
+          "median": 9097.45873189,
+          "minimum": 8834.37754019,
+          "maximum": 10161.1510701,
+          "stdev": 521.6676299957686
+        },
+        "latency_p50_us": {
+          "median": 422.372,
+          "minimum": 374.636,
+          "maximum": 438.98,
+          "stdev": 25.822050592468436
+        },
+        "latency_p95_us": {
+          "median": 526.233,
+          "minimum": 497.509,
+          "maximum": 571.844,
+          "stdev": 29.114535814606437
+        },
+        "latency_p99_us": {
+          "median": 668.605,
+          "minimum": 615.146,
+          "maximum": 681.028,
+          "stdev": 26.874783688431826
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 166477343.046,
+          "minimum": 159521201.497,
+          "maximum": 187493747.711,
+          "stdev": 11066464.081800856
+        },
+        "runes_per_second": {
+          "median": 58925958.9629,
+          "minimum": 56463778.2002,
+          "maximum": 66364879.9363,
+          "stdev": 3917061.603715557
+        },
+        "requests_per_second": {
+          "median": 28772.4408998,
+          "minimum": 27570.2041993,
+          "maximum": 32404.7265314,
+          "stdev": 1912.6277361890861
+        },
+        "latency_p50_us": {
+          "median": 131.699,
+          "minimum": 112.998,
+          "maximum": 138.72,
+          "stdev": 9.791751263180656
+        },
+        "latency_p95_us": {
+          "median": 180.765,
+          "minimum": 170.314,
+          "maximum": 186.611,
+          "stdev": 6.6796774248462
+        },
+        "latency_p99_us": {
+          "median": 233.699,
+          "minimum": 206.866,
+          "maximum": 246.857,
+          "stdev": 14.788642321051647
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 115828166.713,
+          "minimum": 110318902.9,
+          "maximum": 135200476.053,
+          "stdev": 9608344.882187327
+        },
+        "runes_per_second": {
+          "median": 40998286.4548,
+          "minimum": 39048239.3951,
+          "maximum": 47855267.0165,
+          "stdev": 3400948.8971487
+        },
+        "requests_per_second": {
+          "median": 20018.694558,
+          "minimum": 19066.5231421,
+          "maximum": 23366.8295979,
+          "stdev": 1660.6195786930393
+        },
+        "latency_p50_us": {
+          "median": 186.033,
+          "minimum": 157.441,
+          "maximum": 198.579,
+          "stdev": 15.256658710215682
+        },
+        "latency_p95_us": {
+          "median": 276.73,
+          "minimum": 247.611,
+          "maximum": 293.657,
+          "stdev": 20.09798902875609
+        },
+        "latency_p99_us": {
+          "median": 336.143,
+          "minimum": 287.167,
+          "maximum": 358.064,
+          "stdev": 26.8395574199725
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "document",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 167102534.924,
+          "minimum": 155350699.075,
+          "maximum": 198067906.113,
+          "stdev": 16156733.187174061
+        },
+        "runes_per_second": {
+          "median": 59147250.5227,
+          "minimum": 54987596.2159,
+          "maximum": 70107686.0905,
+          "stdev": 5718802.206610153
+        },
+        "requests_per_second": {
+          "median": 28880.4934193,
+          "minimum": 26849.4122148,
+          "maximum": 34232.2685989,
+          "stdev": 2792.383889951749
+        },
+        "latency_p50_us": {
+          "median": 129.275,
+          "minimum": 110.445,
+          "maximum": 141.708,
+          "stdev": 11.368907304574176
+        },
+        "latency_p95_us": {
+          "median": 175.718,
+          "minimum": 138.834,
+          "maximum": 209.169,
+          "stdev": 29.91287753292886
+        },
+        "latency_p99_us": {
+          "median": 231.089,
+          "minimum": 200.978,
+          "maximum": 260.033,
+          "stdev": 20.956806118776786
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 193289422.675,
+          "minimum": 180577495.276,
+          "maximum": 227563572.802,
+          "stdev": 17659628.77711244
+        },
+        "runes_per_second": {
+          "median": 64429807.5585,
+          "minimum": 60192498.4253,
+          "maximum": 75854524.2674,
+          "stdev": 5886542.925714945
+        },
+        "requests_per_second": {
+          "median": 6623.12988882,
+          "minimum": 6187.55123615,
+          "maximum": 7797.54566893,
+          "stdev": 605.1133764086761
+        },
+        "latency_p50_us": {
+          "median": 587.658,
+          "minimum": 496.398,
+          "maximum": 631.381,
+          "stdev": 49.733914156237475
+        },
+        "latency_p95_us": {
+          "median": 653.947,
+          "minimum": 582.956,
+          "maximum": 709.762,
+          "stdev": 45.23739765614284
+        },
+        "latency_p99_us": {
+          "median": 912.955,
+          "minimum": 802.505,
+          "maximum": 1001.4,
+          "stdev": 71.08164145333167
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 178324423.607,
+          "minimum": 172350367.282,
+          "maximum": 180079951.704,
+          "stdev": 3197656.437515425
+        },
+        "runes_per_second": {
+          "median": 59441474.5358,
+          "minimum": 57450122.4273,
+          "maximum": 60026650.5679,
+          "stdev": 1065885.4791741841
+        },
+        "requests_per_second": {
+          "median": 6110.34894488,
+          "minimum": 5905.64580873,
+          "maximum": 6170.50273108,
+          "stdev": 109.56881981665879
+        },
+        "latency_p50_us": {
+          "median": 632.745,
+          "minimum": 628.919,
+          "maximum": 665.245,
+          "stdev": 14.999102156462563
+        },
+        "latency_p95_us": {
+          "median": 723.811,
+          "minimum": 707.656,
+          "maximum": 793.54,
+          "stdev": 38.24910552156742
+        },
+        "latency_p99_us": {
+          "median": 1006.11,
+          "minimum": 977.9,
+          "maximum": 1046.954,
+          "stdev": 28.233050965136577
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 430595263.301,
+          "minimum": 410754801.237,
+          "maximum": 447445571.272,
+          "stdev": 16755357.526436904
+        },
+        "runes_per_second": {
+          "median": 143531754.434,
+          "minimum": 136918267.079,
+          "maximum": 149148523.757,
+          "stdev": 5585119.175395162
+        },
+        "requests_per_second": {
+          "median": 14754.4977831,
+          "minimum": 14074.6573889,
+          "maximum": 15331.8794981,
+          "stdev": 574.1282047082234
+        },
+        "latency_p50_us": {
+          "median": 260.933,
+          "minimum": 250.572,
+          "maximum": 269.951,
+          "stdev": 9.213012498634749
+        },
+        "latency_p95_us": {
+          "median": 303.79,
+          "minimum": 286.856,
+          "maximum": 338.577,
+          "stdev": 20.211523099459868
+        },
+        "latency_p99_us": {
+          "median": 426.887,
+          "minimum": 409.886,
+          "maximum": 449.15,
+          "stdev": 17.55399471630316
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 148448585.245,
+          "minimum": 145350629.1,
+          "maximum": 149866594.044,
+          "stdev": 1869492.8448702684
+        },
+        "runes_per_second": {
+          "median": 49482861.7484,
+          "minimum": 48450209.7,
+          "maximum": 49955531.3479,
+          "stdev": 623164.2816021157
+        },
+        "requests_per_second": {
+          "median": 5086.64286065,
+          "minimum": 4980.49030633,
+          "maximum": 5135.23142968,
+          "stdev": 64.05882829114894
+        },
+        "latency_p50_us": {
+          "median": 779.641,
+          "minimum": 755.35,
+          "maximum": 788.88,
+          "stdev": 14.244553180075519
+        },
+        "latency_p95_us": {
+          "median": 880.755,
+          "minimum": 877.783,
+          "maximum": 887.462,
+          "stdev": 3.7482788983745468
+        },
+        "latency_p99_us": {
+          "median": 1186.741,
+          "minimum": 1167.936,
+          "maximum": 1213.764,
+          "stdev": 19.545417680366903
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 219771909.102,
+          "minimum": 210532690.515,
+          "maximum": 251684784.558,
+          "stdev": 16306820.11820804
+        },
+        "runes_per_second": {
+          "median": 73257303.034,
+          "minimum": 70177563.5049,
+          "maximum": 83894928.1861,
+          "stdev": 5435606.706152498
+        },
+        "requests_per_second": {
+          "median": 7530.56157833,
+          "minimum": 7213.97651161,
+          "maximum": 8624.06745334,
+          "stdev": 558.758913049267
+        },
+        "latency_p50_us": {
+          "median": 517.545,
+          "minimum": 452.396,
+          "maximum": 548.395,
+          "stdev": 36.14290409333482
+        },
+        "latency_p95_us": {
+          "median": 577.072,
+          "minimum": 534.831,
+          "maximum": 612.132,
+          "stdev": 31.383716871970403
+        },
+        "latency_p99_us": {
+          "median": 837.602,
+          "minimum": 772.1,
+          "maximum": 869.79,
+          "stdev": 38.16455604091312
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 157211628.153,
+          "minimum": 153093554.596,
+          "maximum": 174849828.096,
+          "stdev": 8579707.76992318
+        },
+        "runes_per_second": {
+          "median": 52403876.0511,
+          "minimum": 51031184.8654,
+          "maximum": 58283276.032,
+          "stdev": 2859902.589948212
+        },
+        "requests_per_second": {
+          "median": 5386.91160065,
+          "minimum": 5245.80436528,
+          "maximum": 5991.29071053,
+          "stdev": 293.9866971587361
+        },
+        "latency_p50_us": {
+          "median": 727.143,
+          "minimum": 632.714,
+          "maximum": 740.635,
+          "stdev": 44.296635778578015
+        },
+        "latency_p95_us": {
+          "median": 853.875,
+          "minimum": 785.037,
+          "maximum": 866.101,
+          "stdev": 40.229469250786785
+        },
+        "latency_p99_us": {
+          "median": 1155.874,
+          "minimum": 1085.827,
+          "maximum": 1171.049,
+          "stdev": 39.0162274611475
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "long",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 193927761.431,
+          "minimum": 187160034.31,
+          "maximum": 196481029.012,
+          "stdev": 3653714.1818990223
+        },
+        "runes_per_second": {
+          "median": 64642587.1437,
+          "minimum": 62386678.1032,
+          "maximum": 65493676.3373,
+          "stdev": 1217904.7273663527
+        },
+        "requests_per_second": {
+          "median": 6645.00279026,
+          "minimum": 6413.1042458,
+          "maximum": 6732.4913998,
+          "stdev": 125.1957984558749
+        },
+        "latency_p50_us": {
+          "median": 582.613,
+          "minimum": 578.987,
+          "maximum": 617.693,
+          "stdev": 16.14947236908995
+        },
+        "latency_p95_us": {
+          "median": 671.196,
+          "minimum": 645.499,
+          "maximum": 686.35,
+          "stdev": 16.162726091226073
+        },
+        "latency_p99_us": {
+          "median": 912.389,
+          "minimum": 896.304,
+          "maximum": 936.869,
+          "stdev": 16.741648744971357
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "lookup",
+      "api": "find",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 412340022.436,
+          "minimum": 363056386.051,
+          "maximum": 433939669.882,
+          "stdev": 29242524.885313045
+        },
+        "runes_per_second": {
+          "median": 136366967.357,
+          "minimum": 120068137.099,
+          "maximum": 143510291.454,
+          "stdev": 9670937.138275392
+        },
+        "requests_per_second": {
+          "median": 41460740.6692,
+          "minimum": 36505276.8378,
+          "maximum": 43632582.6747,
+          "stdev": 2940332.431529746
+        },
+        "latency_p50_us": {
+          "median": 0.067,
+          "minimum": 0.062,
+          "maximum": 0.071,
+          "stdev": 0.0031937438845342607
+        },
+        "latency_p95_us": {
+          "median": 0.088,
+          "minimum": 0.082,
+          "maximum": 0.101,
+          "stdev": 0.007190271204899022
+        },
+        "latency_p99_us": {
+          "median": 0.16,
+          "minimum": 0.155,
+          "maximum": 0.18,
+          "stdev": 0.01151954860226736
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "cut",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 150827038.311,
+          "minimum": 129499070.078,
+          "maximum": 166146386.181,
+          "stdev": 14696544.517710244
+        },
+        "runes_per_second": {
+          "median": 55835009.3746,
+          "minimum": 47939559.5963,
+          "maximum": 61506114.1151,
+          "stdev": 5440547.730025726
+        },
+        "requests_per_second": {
+          "median": 5801039.93503,
+          "minimum": 4980733.46455,
+          "maximum": 6390245.62235,
+          "stdev": 565251.7122138767
+        },
+        "latency_p50_us": {
+          "median": 0.476,
+          "minimum": 0.434,
+          "maximum": 0.541,
+          "stdev": 0.03922371731491039
+        },
+        "latency_p95_us": {
+          "median": 0.796,
+          "minimum": 0.714,
+          "maximum": 0.965,
+          "stdev": 0.10277402395547233
+        },
+        "latency_p99_us": {
+          "median": 0.862,
+          "minimum": 0.774,
+          "maximum": 1.465,
+          "stdev": 0.2839674277095879
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "full",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 144725316.081,
+          "minimum": 129828268.036,
+          "maximum": 161575650.947,
+          "stdev": 11302238.79923697
+        },
+        "runes_per_second": {
+          "median": 53576198.7417,
+          "minimum": 48061426.1478,
+          "maximum": 59814063.091,
+          "stdev": 4184001.863236111
+        },
+        "requests_per_second": {
+          "median": 5566358.31083,
+          "minimum": 4993394.92445,
+          "maximum": 6214448.11335,
+          "stdev": 434701.49228335137
+        },
+        "latency_p50_us": {
+          "median": 0.522,
+          "minimum": 0.469,
+          "maximum": 0.585,
+          "stdev": 0.04118009227770136
+        },
+        "latency_p95_us": {
+          "median": 0.807,
+          "minimum": 0.707,
+          "maximum": 0.885,
+          "stdev": 0.06411552074186096
+        },
+        "latency_p99_us": {
+          "median": 0.863,
+          "minimum": 0.749,
+          "maximum": 1.013,
+          "stdev": 0.10111973101230043
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "hmm",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 307323928.138,
+          "minimum": 198635587.43,
+          "maximum": 348873945.604,
+          "stdev": 56045158.964426786
+        },
+        "runes_per_second": {
+          "median": 113768954.166,
+          "minimum": 73533366.5004,
+          "maximum": 129150451.017,
+          "stdev": 20747486.732102014
+        },
+        "requests_per_second": {
+          "median": 11820151.0822,
+          "minimum": 7639830.28575,
+          "maximum": 13418228.6771,
+          "stdev": 2155583.0371025736
+        },
+        "latency_p50_us": {
+          "median": 0.282,
+          "minimum": 0.254,
+          "maximum": 0.309,
+          "stdev": 0.019608671551127572
+        },
+        "latency_p95_us": {
+          "median": 0.335,
+          "minimum": 0.302,
+          "maximum": 0.37,
+          "stdev": 0.02417229819442082
+        },
+        "latency_p99_us": {
+          "median": 0.384,
+          "minimum": 0.315,
+          "maximum": 0.423,
+          "stdev": 0.03983340306827927
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "keywords",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 85036378.9718,
+          "minimum": 79459200.0731,
+          "maximum": 96498794.5491,
+          "stdev": 6210110.066624147
+        },
+        "runes_per_second": {
+          "median": 31479813.3694,
+          "minimum": 29415184.6424,
+          "maximum": 35723111.4437,
+          "stdev": 2298934.976614605
+        },
+        "requests_per_second": {
+          "median": 3270629.96045,
+          "minimum": 3056123.07973,
+          "maximum": 3711492.09804,
+          "stdev": 238850.38717823644
+        },
+        "latency_p50_us": {
+          "median": 0.844,
+          "minimum": 0.741,
+          "maximum": 0.911,
+          "stdev": 0.06727035008084915
+        },
+        "latency_p95_us": {
+          "median": 1.447,
+          "minimum": 1.291,
+          "maximum": 1.697,
+          "stdev": 0.15100000000000005
+        },
+        "latency_p99_us": {
+          "median": 1.705,
+          "minimum": 1.386,
+          "maximum": 1.863,
+          "stdev": 0.18676643167336043
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "mp",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 217173785.554,
+          "minimum": 195020961.097,
+          "maximum": 222223038.939,
+          "stdev": 12778355.065861259
+        },
+        "runes_per_second": {
+          "median": 80396064.8444,
+          "minimum": 72195259.6367,
+          "maximum": 82265259.6074,
+          "stdev": 4730448.75046586
+        },
+        "requests_per_second": {
+          "median": 8352837.90591,
+          "minimum": 7500806.19603,
+          "maximum": 8547039.95921,
+          "stdev": 491475.1948497552
+        },
+        "latency_p50_us": {
+          "median": 0.313,
+          "minimum": 0.311,
+          "maximum": 0.366,
+          "stdev": 0.023298068589477538
+        },
+        "latency_p95_us": {
+          "median": 0.546,
+          "minimum": 0.541,
+          "maximum": 0.651,
+          "stdev": 0.04784871994108096
+        },
+        "latency_p99_us": {
+          "median": 0.586,
+          "minimum": 0.565,
+          "maximum": 0.717,
+          "stdev": 0.06985484950953658
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "search",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 126059744.27,
+          "minimum": 99136398.9975,
+          "maximum": 144916126.308,
+          "stdev": 16800513.397275575
+        },
+        "runes_per_second": {
+          "median": 46666347.6385,
+          "minimum": 36699532.3212,
+          "maximum": 53646835.2199,
+          "stdev": 6219420.824977846
+        },
+        "requests_per_second": {
+          "median": 4848451.70271,
+          "minimum": 3812938.42298,
+          "maximum": 5573697.16571,
+          "stdev": 646173.592208733
+        },
+        "latency_p50_us": {
+          "median": 0.624,
+          "minimum": 0.545,
+          "maximum": 0.672,
+          "stdev": 0.04589335463877096
+        },
+        "latency_p95_us": {
+          "median": 1.033,
+          "minimum": 0.812,
+          "maximum": 1.61,
+          "stdev": 0.3055457412565261
+        },
+        "latency_p99_us": {
+          "median": 1.138,
+          "minimum": 0.869,
+          "maximum": 1.726,
+          "stdev": 0.3372940853320734
+        }
+      }
+    },
+    {
+      "variant": "original-A",
+      "kind": "warm",
+      "corpus": "short",
+      "api": "small",
+      "threads": 4,
+      "diagnostic": false,
+      "samples": 5,
+      "metrics": {
+        "bytes_per_second": {
+          "median": 158265608.588,
+          "minimum": 151091939.998,
+          "maximum": 172643991.771,
+          "stdev": 7973210.235280033
+        },
+        "runes_per_second": {
+          "median": 58588710.8715,
+          "minimum": 55933073.9414,
+          "maximum": 63911477.7228,
+          "stdev": 2951621.096718887
+        },
+        "requests_per_second": {
+          "median": 6087138.79185,
+          "minimum": 5811228.46144,
+          "maximum": 6640153.52965,
+          "stdev": 306661.9321311893
+        },
+        "latency_p50_us": {
+          "median": 0.412,
+          "minimum": 0.366,
+          "maximum": 0.446,
+          "stdev": 0.028771513689759182
+        },
+        "latency_p95_us": {
+          "median": 0.804,
+          "minimum": 0.754,
+          "maximum": 0.868,
+          "stdev": 0.04113757406556686
+        },
+        "latency_p99_us": {
+          "median": 0.853,
+          "minimum": 0.79,
+          "maximum": 0.923,
+          "stdev": 0.04748999894714676
+        }
+      }
+    }
+  ]
+}

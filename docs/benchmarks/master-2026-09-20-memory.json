@@ -1,0 +1,195 @@
+{
+  "baseline": "103e1a2",
+  "current": "59310b0",
+  "notes": "Linux/glibc diagnostic; malloc_trim(0) is never used in production or performance runs; model remains alive",
+  "runs": [
+    {
+      "variant": "master",
+      "repeat": 0,
+      "raw": "A rss_before_MiB=123.055 rss_after_trim_MiB=122.004 allocated_before_MiB=118.372 allocated_after_MiB=118.372 free_heap_before_MiB=1.217 trim_return=1",
+      "rss_before_MiB": 123.055,
+      "rss_after_trim_MiB": 122.004,
+      "allocated_before_MiB": 118.372,
+      "allocated_after_MiB": 118.372,
+      "free_heap_before_MiB": 1.217,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "C",
+      "repeat": 0,
+      "raw": "C rss_before_MiB=87.059 rss_after_trim_MiB=65.191 allocated_before_MiB=61.426 allocated_after_MiB=61.426 free_heap_before_MiB=22.206 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 65.191,
+      "allocated_before_MiB": 61.426,
+      "allocated_after_MiB": 61.426,
+      "free_heap_before_MiB": 22.206,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "D",
+      "repeat": 0,
+      "raw": "D rss_before_MiB=87.059 rss_after_trim_MiB=66.172 allocated_before_MiB=62.406 allocated_after_MiB=62.406 free_heap_before_MiB=21.226 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 66.172,
+      "allocated_before_MiB": 62.406,
+      "allocated_after_MiB": 62.406,
+      "free_heap_before_MiB": 21.226,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "master",
+      "repeat": 1,
+      "raw": "A rss_before_MiB=123.055 rss_after_trim_MiB=122.004 allocated_before_MiB=118.372 allocated_after_MiB=118.372 free_heap_before_MiB=1.217 trim_return=1",
+      "rss_before_MiB": 123.055,
+      "rss_after_trim_MiB": 122.004,
+      "allocated_before_MiB": 118.372,
+      "allocated_after_MiB": 118.372,
+      "free_heap_before_MiB": 1.217,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "C",
+      "repeat": 1,
+      "raw": "C rss_before_MiB=87.059 rss_after_trim_MiB=65.191 allocated_before_MiB=61.426 allocated_after_MiB=61.426 free_heap_before_MiB=22.206 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 65.191,
+      "allocated_before_MiB": 61.426,
+      "allocated_after_MiB": 61.426,
+      "free_heap_before_MiB": 22.206,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "D",
+      "repeat": 1,
+      "raw": "D rss_before_MiB=87.055 rss_after_trim_MiB=66.168 allocated_before_MiB=62.406 allocated_after_MiB=62.406 free_heap_before_MiB=21.226 trim_return=1",
+      "rss_before_MiB": 87.055,
+      "rss_after_trim_MiB": 66.168,
+      "allocated_before_MiB": 62.406,
+      "allocated_after_MiB": 62.406,
+      "free_heap_before_MiB": 21.226,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "master",
+      "repeat": 2,
+      "raw": "A rss_before_MiB=123.059 rss_after_trim_MiB=122.008 allocated_before_MiB=118.372 allocated_after_MiB=118.372 free_heap_before_MiB=1.217 trim_return=1",
+      "rss_before_MiB": 123.059,
+      "rss_after_trim_MiB": 122.008,
+      "allocated_before_MiB": 118.372,
+      "allocated_after_MiB": 118.372,
+      "free_heap_before_MiB": 1.217,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "C",
+      "repeat": 2,
+      "raw": "C rss_before_MiB=87.059 rss_after_trim_MiB=65.191 allocated_before_MiB=61.426 allocated_after_MiB=61.426 free_heap_before_MiB=22.206 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 65.191,
+      "allocated_before_MiB": 61.426,
+      "allocated_after_MiB": 61.426,
+      "free_heap_before_MiB": 22.206,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "D",
+      "repeat": 2,
+      "raw": "D rss_before_MiB=87.055 rss_after_trim_MiB=66.168 allocated_before_MiB=62.406 allocated_after_MiB=62.406 free_heap_before_MiB=21.226 trim_return=1",
+      "rss_before_MiB": 87.055,
+      "rss_after_trim_MiB": 66.168,
+      "allocated_before_MiB": 62.406,
+      "allocated_after_MiB": 62.406,
+      "free_heap_before_MiB": 21.226,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "master",
+      "repeat": 3,
+      "raw": "A rss_before_MiB=123.059 rss_after_trim_MiB=122.008 allocated_before_MiB=118.372 allocated_after_MiB=118.372 free_heap_before_MiB=1.217 trim_return=1",
+      "rss_before_MiB": 123.059,
+      "rss_after_trim_MiB": 122.008,
+      "allocated_before_MiB": 118.372,
+      "allocated_after_MiB": 118.372,
+      "free_heap_before_MiB": 1.217,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "C",
+      "repeat": 3,
+      "raw": "C rss_before_MiB=87.059 rss_after_trim_MiB=65.191 allocated_before_MiB=61.426 allocated_after_MiB=61.426 free_heap_before_MiB=22.206 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 65.191,
+      "allocated_before_MiB": 61.426,
+      "allocated_after_MiB": 61.426,
+      "free_heap_before_MiB": 22.206,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "D",
+      "repeat": 3,
+      "raw": "D rss_before_MiB=87.059 rss_after_trim_MiB=66.199 allocated_before_MiB=62.406 allocated_after_MiB=62.406 free_heap_before_MiB=21.226 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 66.199,
+      "allocated_before_MiB": 62.406,
+      "allocated_after_MiB": 62.406,
+      "free_heap_before_MiB": 21.226,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "master",
+      "repeat": 4,
+      "raw": "A rss_before_MiB=123.059 rss_after_trim_MiB=122.008 allocated_before_MiB=118.372 allocated_after_MiB=118.372 free_heap_before_MiB=1.217 trim_return=1",
+      "rss_before_MiB": 123.059,
+      "rss_after_trim_MiB": 122.008,
+      "allocated_before_MiB": 118.372,
+      "allocated_after_MiB": 118.372,
+      "free_heap_before_MiB": 1.217,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "C",
+      "repeat": 4,
+      "raw": "C rss_before_MiB=87.059 rss_after_trim_MiB=65.191 allocated_before_MiB=61.426 allocated_after_MiB=61.426 free_heap_before_MiB=22.206 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 65.191,
+      "allocated_before_MiB": 61.426,
+      "allocated_after_MiB": 61.426,
+      "free_heap_before_MiB": 22.206,
+      "trim_return": 1.0
+    },
+    {
+      "variant": "D",
+      "repeat": 4,
+      "raw": "D rss_before_MiB=87.059 rss_after_trim_MiB=66.047 allocated_before_MiB=62.406 allocated_after_MiB=62.406 free_heap_before_MiB=21.226 trim_return=1",
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 66.047,
+      "allocated_before_MiB": 62.406,
+      "allocated_after_MiB": 62.406,
+      "free_heap_before_MiB": 21.226,
+      "trim_return": 1.0
+    }
+  ],
+  "medians": {
+    "master": {
+      "rss_before_MiB": 123.059,
+      "rss_after_trim_MiB": 122.008,
+      "allocated_before_MiB": 118.372,
+      "allocated_after_MiB": 118.372,
+      "free_heap_before_MiB": 1.217
+    },
+    "C": {
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 65.191,
+      "allocated_before_MiB": 61.426,
+      "allocated_after_MiB": 61.426,
+      "free_heap_before_MiB": 22.206
+    },
+    "D": {
+      "rss_before_MiB": 87.059,
+      "rss_after_trim_MiB": 66.168,
+      "allocated_before_MiB": 62.406,
+      "allocated_after_MiB": 62.406,
+      "free_heap_before_MiB": 21.226
+    }
+  }
+}
