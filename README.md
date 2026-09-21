@@ -21,6 +21,8 @@ CppJieba是"结巴(Jieba)"中文分词的C++版本
 
 ## 快速开始
 
+本分支完整的编译、测试、诊断及接入步骤见 [dat_merged 编译与测试指南](docs/dat-merged-build-test.md)。
+
 ### 环境要求
 
 - C++ 编译器：
@@ -31,7 +33,7 @@ CppJieba是"结巴(Jieba)"中文分词的C++版本
 ### 安装步骤
 
 ```sh
-git clone https://github.com/yanyiwu/cppjieba.git
+git clone --branch dat_merged --single-branch https://github.com/lbsswhu/cppjieba.git
 cd cppjieba
 mkdir build
 cd build
